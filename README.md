@@ -31,6 +31,9 @@ cd StegaStamp
 - Install tensorflow-addons 0.17.1
 - Python 3 required
 - Download dependencies
+
+
+- Use make prepare_local_setup command to install everything and download pretrained models
 ```bash=
 pip install -r requirements.txt
 ```
