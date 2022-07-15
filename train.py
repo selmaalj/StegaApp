@@ -8,7 +8,7 @@ import utils
 import models
 from os.path import join
 
-TRAIN_PATH = '/Users/mirza/Documents/Projects/stagestamp-fork/dataset/'
+TRAIN_PATH = 'path_to_dataset'
 LOGS_Path = "./logs/"
 CHECKPOINTS_PATH = 'checkpoints/'
 SAVED_MODELS = './new_models/'

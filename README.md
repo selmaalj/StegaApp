@@ -34,6 +34,7 @@ cd StegaStamp
 
 
 - Use make prepare_local_setup command to install everything and download pretrained models
+- If virtual env is not activate, activate it manually by source env/bin/activate command 
 ```bash=
 pip install -r requirements.txt
 ```
