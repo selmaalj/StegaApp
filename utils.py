@@ -7,36 +7,36 @@ import tensorflow as tf
 
 def random_blur_kernel(probs, N_blur, sigrange_gauss, sigrange_line, wmin_line):
     N = N_blur
-    coords = tf.to_float(tf.stack(tf.meshgrid(tf.range(N_blur), tf.range(N_blur), indexing='ij'), -1)) - (.5 * (N-1))
+    coords = tf.cast(tf.stack(tf.meshgrid(tf.range(N_blur), tf.range(N_blur), indexing='ij'), -1), dtype=tf.float32) - (.5 * (N-1))
     # coords = tf.to_float(coords)
-    manhat = tf.reduce_sum(tf.abs(coords), -1)
+    manhat = tf.reduce_sum(input_tensor=tf.abs(coords), axis=-1)
 
     # nothing, default
 
-    vals_nothing = tf.to_float(manhat < .5)
+    vals_nothing = tf.cast(manhat < .5, dtype=tf.float32)
 
     # gauss
 
     sig_gauss = tf.random.uniform([], sigrange_gauss[0], sigrange_gauss[1])
-    vals_gauss = tf.exp(-tf.reduce_sum(coords**2, -1)/2./sig_gauss**2)
+    vals_gauss = tf.exp(-tf.reduce_sum(input_tensor=coords**2, axis=-1)/2./sig_gauss**2)
 
     # line
 
-    theta = tf.random_uniform([], 0, 2.*np.pi)
-    v = tf.convert_to_tensor([tf.cos(theta), tf.sin(theta)])
-    dists = tf.reduce_sum(coords * v, -1)
+    theta = tf.random.uniform([], 0, 2.*np.pi)
+    v = tf.convert_to_tensor(value=[tf.cos(theta), tf.sin(theta)])
+    dists = tf.reduce_sum(input_tensor=coords * v, axis=-1)
 
     sig_line = tf.random.uniform([], sigrange_line[0], sigrange_line[1])
     w_line = tf.random.uniform([], wmin_line, .5 * (N-1) + .1)
 
-    vals_line = tf.exp(-dists**2/2./sig_line**2) * tf.to_float(manhat < w_line)
+    vals_line = tf.exp(-dists**2/2./sig_line**2) * tf.cast(manhat < w_line, dtype=tf.float32)
 
-    t = tf.random_uniform([])
+    t = tf.random.uniform([])
     vals = vals_nothing
-    vals = tf.cond(t < probs[0]+probs[1], lambda : vals_line, lambda : vals)
-    vals = tf.cond(t < probs[0], lambda : vals_gauss, lambda : vals)
+    vals = tf.cond(pred=t < probs[0]+probs[1], true_fn=lambda : vals_line, false_fn=lambda : vals)
+    vals = tf.cond(pred=t < probs[0], true_fn=lambda : vals_gauss, false_fn=lambda : vals)
 
-    v = vals / tf.reduce_sum(vals)
+    v = vals / tf.reduce_sum(input_tensor=vals)
     z = tf.zeros_like(v)
     f = tf.reshape(tf.stack([v,z,z, z,v,z, z,z,v],-1), [N,N,3,3])
 
@@ -116,10 +116,10 @@ def downsampling_420(image):
   #   cb: batch x height/2 x width/2
   #   cr: batch x height/2 x width/2
   y, cb, cr = tf.split(image, 3, axis=3)
-  cb = tf.nn.avg_pool(
-      cb, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
-  cr = tf.nn.avg_pool(
-      cr, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+  cb = tf.nn.avg_pool2d(
+      input=cb, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
+  cr = tf.nn.avg_pool2d(
+      input=cr, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1], padding='SAME')
   return (tf.squeeze(
       y, axis=-1), tf.squeeze(
           cb, axis=-1), tf.squeeze(
@@ -133,9 +133,9 @@ def image_to_patches(image):
   # output: batch x h*w/64 x h x w
   k = 8
   height, width = image.shape.as_list()[1:3]
-  batch_size = tf.shape(image)[0]
+  batch_size = tf.shape(input=image)[0]
   image_reshaped = tf.reshape(image, [batch_size, height // k, k, -1, k])
-  image_transposed = tf.transpose(image_reshaped, [0, 1, 3, 2, 4])
+  image_transposed = tf.transpose(a=image_reshaped, perm=[0, 1, 3, 2, 4])
   return tf.reshape(image_transposed, [batch_size, -1, k, k])
 
 
@@ -237,10 +237,10 @@ def patches_to_image(patches, height, width):
   # input: batch x h*w/64 x h x w
   # output: batch x h x w
   k = 8
-  batch_size = tf.shape(patches)[0]
+  batch_size = tf.shape(input=patches)[0]
   image_reshaped = tf.reshape(patches,
                               [batch_size, height // k, width // k, k, k])
-  image_transposed = tf.transpose(image_reshaped, [0, 1, 3, 2, 4])
+  image_transposed = tf.transpose(a=image_reshaped, perm=[0, 1, 3, 2, 4])
   return tf.reshape(image_transposed, [batch_size, height, width])
 
 
@@ -314,7 +314,7 @@ def jpeg_compress_decompress(image,
     right = wpad - left
 
     #image = tf.pad(image, [[0, 0], [top, bottom], [left, right], [0, 0]], 'SYMMETRIC')
-    image = tf.pad(image, [[0, 0], [0, vpad], [0, wpad], [0, 0]], 'SYMMETRIC')
+    image = tf.pad(tensor=image, paddings=[[0, 0], [0, vpad], [0, wpad], [0, 0]], mode='SYMMETRIC')
 
   # "Compression"
   image = rgb_to_ycbcr_jpeg(image)

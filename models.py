@@ -1,11 +1,12 @@
 import numpy as np
-import os
 import lpips.lpips_tf as lpips_tf
 import tensorflow as tf
+import tensorflow_addons as tfa
+
 import utils
-from tensorflow import keras
 from tensorflow.python.keras.models import *
 from tensorflow.python.keras.layers import *
+
 from stn import spatial_transformer_network as stn_transformer
 
 class StegaStampEncoder(Layer):
@@ -113,20 +114,20 @@ class Discriminator(Layer):
     def call(self, image):
             x = image - .5
             x = self.model(x)
-            output = tf.reduce_mean(x)
+            output = tf.reduce_mean(input_tensor=x)
             return output, x
 
 def transform_net(encoded_image, args, global_step):
-    sh = tf.shape(encoded_image)
+    sh = tf.shape(input=encoded_image)
 
-    ramp_fn = lambda ramp : tf.minimum(tf.to_float(global_step) / ramp, 1.)
+    ramp_fn = lambda ramp : tf.minimum(tf.cast(global_step, dtype=tf.float32) / ramp, 1.)
 
     rnd_bri = ramp_fn(args.rnd_bri_ramp) * args.rnd_bri
     rnd_hue = ramp_fn(args.rnd_hue_ramp) * args.rnd_hue
     rnd_brightness = utils.get_rnd_brightness_tf(rnd_bri, rnd_hue, args.batch_size)
 
     jpeg_quality = 100. - tf.random.uniform([]) * ramp_fn(args.jpeg_quality_ramp) * (100.-args.jpeg_quality)
-    jpeg_factor = tf.cond(tf.less(jpeg_quality, 50), lambda: 5000. / jpeg_quality, lambda: 200. - jpeg_quality * 2) / 100. + .0001
+    jpeg_factor = tf.cond(pred=tf.less(jpeg_quality, 50), true_fn=lambda: 5000. / jpeg_quality, false_fn=lambda: 200. - jpeg_quality * 2) / 100. + .0001
 
     rnd_noise = tf.random.uniform([]) * ramp_fn(args.rnd_noise_ramp) * args.rnd_noise
 
@@ -137,48 +138,48 @@ def transform_net(encoded_image, args, global_step):
     rnd_sat = tf.random.uniform([]) * ramp_fn(args.rnd_sat_ramp) * args.rnd_sat
 
     # blur
-    f = utils.random_blur_kernel(probs=[.25,.25], N_blur=7,
-                           sigrange_gauss=[1.,3.], sigrange_line=[.25,1.], wmin_line=3)
-    encoded_image = tf.nn.conv2d(encoded_image, f, [1,1,1,1], padding='SAME')
+    f = utils.random_blur_kernel(probs=[.25, .25], N_blur=7,
+                                 sigrange_gauss=[1.,3.], sigrange_line=[.25,1.], wmin_line=3)
+    encoded_image = tf.nn.conv2d(input=encoded_image, filters=f, strides=[1,1,1,1], padding='SAME')
 
-    noise = tf.random_normal(shape=tf.shape(encoded_image), mean=0.0, stddev=rnd_noise, dtype=tf.float32)
+    noise = tf.random.normal(shape=tf.shape(input=encoded_image), mean=0.0, stddev=rnd_noise, dtype=tf.float32)
     encoded_image = encoded_image + noise
     encoded_image = tf.clip_by_value(encoded_image, 0, 1)
 
-    contrast_scale = tf.random_uniform(shape=[tf.shape(encoded_image)[0]], minval=contrast_params[0], maxval=contrast_params[1])
-    contrast_scale = tf.reshape(contrast_scale, shape=[tf.shape(encoded_image)[0],1,1,1])
+    contrast_scale = tf.random.uniform(shape=[tf.shape(input=encoded_image)[0]], minval=contrast_params[0], maxval=contrast_params[1])
+    contrast_scale = tf.reshape(contrast_scale, shape=[tf.shape(input=encoded_image)[0],1,1,1])
 
     encoded_image = encoded_image * contrast_scale
     encoded_image = encoded_image + rnd_brightness
     encoded_image = tf.clip_by_value(encoded_image, 0, 1)
 
 
-    encoded_image_lum = tf.expand_dims(tf.reduce_sum(encoded_image * tf.constant([.3,.6,.1]), axis=3), 3)
+    encoded_image_lum = tf.expand_dims(tf.reduce_sum(input_tensor=encoded_image * tf.constant([.3,.6,.1]), axis=3), 3)
     encoded_image = (1 - rnd_sat) * encoded_image + rnd_sat * encoded_image_lum
 
     encoded_image = tf.reshape(encoded_image, [-1,400,400,3])
     if not args.no_jpeg:
         encoded_image = utils.jpeg_compress_decompress(encoded_image, rounding=utils.round_only_at_0, factor=jpeg_factor, downsample_c=True)
 
-    summaries = [tf.summary.scalar('transformer/rnd_bri', rnd_bri),
-                 tf.summary.scalar('transformer/rnd_sat', rnd_sat),
-                 tf.summary.scalar('transformer/rnd_hue', rnd_hue),
-                 tf.summary.scalar('transformer/rnd_noise', rnd_noise),
-                 tf.summary.scalar('transformer/contrast_low', contrast_low),
-                 tf.summary.scalar('transformer/contrast_high', contrast_high),
-                 tf.summary.scalar('transformer/jpeg_quality', jpeg_quality)]
+    summaries = [tf.compat.v1.summary.scalar('transformer/rnd_bri', rnd_bri),
+                 tf.compat.v1.summary.scalar('transformer/rnd_sat', rnd_sat),
+                 tf.compat.v1.summary.scalar('transformer/rnd_hue', rnd_hue),
+                 tf.compat.v1.summary.scalar('transformer/rnd_noise', rnd_noise),
+                 tf.compat.v1.summary.scalar('transformer/contrast_low', contrast_low),
+                 tf.compat.v1.summary.scalar('transformer/contrast_high', contrast_high),
+                 tf.compat.v1.summary.scalar('transformer/jpeg_quality', jpeg_quality)]
 
     return encoded_image, summaries
 
 
 def get_secret_acc(secret_true,secret_pred):
-    with tf.variable_scope("acc"):
+    with tf.compat.v1.variable_scope("acc"):
         secret_pred = tf.round(tf.sigmoid(secret_pred))
-        correct_pred = tf.to_int64(tf.shape(secret_pred)[1]) - tf.count_nonzero(secret_pred - secret_true, axis=1)
+        correct_pred = tf.cast(tf.shape(input=secret_pred)[1], dtype=tf.int64) - tf.math.count_nonzero(secret_pred - secret_true, axis=1)
 
-        str_acc = 1.0 - tf.count_nonzero(correct_pred - tf.to_int64(tf.shape(secret_pred)[1])) / tf.size(correct_pred, out_type=tf.int64)
+        str_acc = 1.0 - tf.math.count_nonzero(correct_pred - tf.cast(tf.shape(input=secret_pred)[1], dtype=tf.int64)) / tf.size(input=correct_pred, out_type=tf.int64)
 
-        bit_acc = tf.reduce_sum(correct_pred) / tf.size(secret_pred, out_type=tf.int64)
+        bit_acc = tf.reduce_sum(input_tensor=correct_pred) / tf.size(input=secret_pred, out_type=tf.int64)
         return bit_acc, str_acc
 
 def build_model(encoder,
@@ -195,38 +196,38 @@ def build_model(encoder,
                 args,
                 global_step):
 
-    input_warped = tf.contrib.image.transform(image_input, M[:,1,:], interpolation='BILINEAR')
-    mask_warped = tf.contrib.image.transform(tf.ones_like(input_warped), M[:,1,:], interpolation='BILINEAR')
+    input_warped = tfa.image.transform(image_input, M[:,1,:], interpolation='BILINEAR')
+    mask_warped = tfa.image.transform(tf.ones_like(input_warped), M[:,1,:], interpolation='BILINEAR')
     input_warped += (1-mask_warped) * image_input
 
     residual_warped = encoder((secret_input, input_warped))
     encoded_warped = residual_warped + input_warped
-    residual = tf.contrib.image.transform(residual_warped, M[:,0,:], interpolation='BILINEAR')
+    residual = tfa.image.transform(residual_warped, M[:,0,:], interpolation='BILINEAR')
 
     if borders == 'no_edge':
         encoded_image = image_input + residual
     elif borders == 'black':
         encoded_image = residual_warped + input_warped
-        encoded_image = tf.contrib.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
-        input_unwarped = tf.contrib.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
+        encoded_image = tfa.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
+        input_unwarped = tfa.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
     elif borders.startswith('random'):
-        mask = tf.contrib.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
+        mask = tfa.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
         encoded_image = residual_warped + input_warped
-        encoded_image = tf.contrib.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
-        input_unwarped = tf.contrib.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
+        encoded_image = tfa.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
+        input_unwarped = tfa.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
         ch = 3 if borders.endswith('rgb') else 1
         encoded_image += (1-mask) * tf.ones_like(residual) * tf.random.uniform([ch])
     elif borders == 'white':
-        mask = tf.contrib.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
+        mask = tfa.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
         encoded_image = residual_warped + input_warped
-        encoded_image = tf.contrib.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
-        input_unwarped = tf.contrib.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
+        encoded_image = tfa.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
+        input_unwarped = tfa.image.transform(input_warped, M[:,0,:], interpolation='BILINEAR')
         encoded_image += (1-mask) * tf.ones_like(residual)
     elif borders == 'image':
-        mask = tf.contrib.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
+        mask = tfa.image.transform(tf.ones_like(residual), M[:,0,:], interpolation='BILINEAR')
         encoded_image = residual_warped + input_warped
-        encoded_image = tf.contrib.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
-        encoded_image += (1-mask) * tf.manip.roll(image_input, shift=1, axis=0)
+        encoded_image = tfa.image.transform(encoded_image, M[:,0,:], interpolation='BILINEAR')
+        encoded_image += (1-mask) * tf.roll(image_input, shift=1, axis=0)
 
     if borders == 'no_edge':
         D_output_real, _ = discriminator(image_input)
@@ -241,8 +242,8 @@ def build_model(encoder,
 
     bit_acc, str_acc = get_secret_acc(secret_input, decoded_secret)
 
-    lpips_loss_op = tf.reduce_mean(lpips_tf.lpips(image_input, encoded_image))
-    secret_loss_op = tf.losses.sigmoid_cross_entropy(secret_input, decoded_secret)
+    lpips_loss_op = tf.reduce_mean(input_tensor=lpips_tf.lpips(image_input, encoded_image))
+    secret_loss_op = tf.compat.v1.losses.sigmoid_cross_entropy(secret_input, decoded_secret)
 
     size = (int(image_input.shape[1]),int(image_input.shape[2]))
     gain = 10
@@ -255,14 +256,14 @@ def build_model(encoder,
         falloff_im[:,-j] *= (np.cos(4*np.pi*j/size[0]+np.pi)+1)/2
         falloff_im[:,j] *= (np.cos(4*np.pi*j/size[0]+np.pi)+1)/2
     falloff_im = 1-falloff_im
-    falloff_im = tf.convert_to_tensor(falloff_im, dtype=tf.float32)
+    falloff_im = tf.convert_to_tensor(value=falloff_im, dtype=tf.float32)
     falloff_im *= l2_edge_gain
 
     encoded_image_yuv = tf.image.rgb_to_yuv(encoded_image)
     image_input_yuv = tf.image.rgb_to_yuv(image_input)
     im_diff = encoded_image_yuv-image_input_yuv
     im_diff += im_diff * tf.expand_dims(falloff_im, axis=[-1])
-    yuv_loss_op = tf.reduce_mean(tf.square(im_diff), axis=[0,1,2])
+    yuv_loss_op = tf.reduce_mean(input_tensor=tf.square(im_diff), axis=[0,1,2])
     image_loss_op = tf.tensordot(yuv_loss_op, yuv_scales, axes=1)
 
     D_loss = D_output_real - D_output_fake
@@ -272,21 +273,21 @@ def build_model(encoder,
     if not args.no_gan:
         loss_op += loss_scales[3]*G_loss
 
-    summary_op = tf.summary.merge([
-        tf.summary.scalar('bit_acc', bit_acc, family='train'),
-        tf.summary.scalar('str_acc', str_acc, family='train'),
-        tf.summary.scalar('loss', loss_op, family='train'),
-        tf.summary.scalar('image_loss', image_loss_op, family='train'),
-        tf.summary.scalar('lpip_loss', lpips_loss_op, family='train'),
-        tf.summary.scalar('G_loss', G_loss, family='train'),
-        tf.summary.scalar('secret_loss', secret_loss_op, family='train'),
-        tf.summary.scalar('dis_loss', D_loss, family='train'),
-        tf.summary.scalar('Y_loss', yuv_loss_op[0], family='color_loss'),
-        tf.summary.scalar('U_loss', yuv_loss_op[1], family='color_loss'),
-        tf.summary.scalar('V_loss', yuv_loss_op[2], family='color_loss'),
+    summary_op = tf.compat.v1.summary.merge([
+        tf.compat.v1.summary.scalar('bit_acc', bit_acc, family='train'),
+        tf.compat.v1.summary.scalar('str_acc', str_acc, family='train'),
+        tf.compat.v1.summary.scalar('loss', loss_op, family='train'),
+        tf.compat.v1.summary.scalar('image_loss', image_loss_op, family='train'),
+        tf.compat.v1.summary.scalar('lpip_loss', lpips_loss_op, family='train'),
+        tf.compat.v1.summary.scalar('G_loss', G_loss, family='train'),
+        tf.compat.v1.summary.scalar('secret_loss', secret_loss_op, family='train'),
+        tf.compat.v1.summary.scalar('dis_loss', D_loss, family='train'),
+        tf.compat.v1.summary.scalar('Y_loss', yuv_loss_op[0], family='color_loss'),
+        tf.compat.v1.summary.scalar('U_loss', yuv_loss_op[1], family='color_loss'),
+        tf.compat.v1.summary.scalar('V_loss', yuv_loss_op[2], family='color_loss'),
     ] + transform_summaries)
 
-    image_summary_op = tf.summary.merge([
+    image_summary_op = tf.compat.v1.summary.merge([
         image_to_summary(image_input, 'image_input', family='input'),
         image_to_summary(input_warped, 'image_warped', family='input'),
         image_to_summary(encoded_warped, 'encoded_warped', family='encoded'),
@@ -301,7 +302,7 @@ def build_model(encoder,
 def image_to_summary(image, name, family='train'):
     image = tf.clip_by_value(image, 0, 1)
     image = tf.cast(image * 255, dtype=tf.uint8)
-    summary = tf.summary.image(name,image,max_outputs=1,family=family)
+    summary = tf.compat.v1.summary.image(name,image,max_outputs=1,family=family)
     return summary
 
 def prepare_deployment_hiding_graph(encoder, secret_input, image_input):

@@ -8,10 +8,10 @@ import utils
 import models
 from os.path import join
 
-TRAIN_PATH = './data/mirflickr/images1/images/'
+TRAIN_PATH = '/Users/mirza/Documents/Projects/stagestamp-fork/dataset/'
 LOGS_Path = "./logs/"
-CHECKPOINTS_PATH = './checkpoints/'
-SAVED_MODELS = './saved_models'
+CHECKPOINTS_PATH = 'checkpoints/'
+SAVED_MODELS = './new_models/'
 
 if not os.path.exists(CHECKPOINTS_PATH):
     os.makedirs(CHECKPOINTS_PATH)
@@ -86,24 +86,26 @@ def main():
 
     EXP_NAME = args.exp_name
 
-    files_list = glob.glob(join(TRAIN_PATH,"**/*"))
+    files_list = glob.glob(join(TRAIN_PATH,""))
 
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
-    sess = tf.Session(config=config)
+    sess = tf.compat.v1.Session(config=config)
 
     height = 400
     width = 400
 
-    secret_pl = tf.placeholder(shape=[None,args.secret_size],dtype=tf.float32,name="input_prep")
-    image_pl = tf.placeholder(shape=[None,height,width,3],dtype=tf.float32,name="input_hide")
-    M_pl = tf.placeholder(shape=[None,2,8],dtype=tf.float32,name="input_transform")
-    global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
-    loss_scales_pl = tf.placeholder(shape=[4],dtype=tf.float32,name="input_loss_scales")
-    l2_edge_gain_pl = tf.placeholder(shape=[1],dtype=tf.float32,name="input_edge_gain")
-    yuv_scales_pl = tf.placeholder(shape=[3],dtype=tf.float32,name="input_yuv_scales")
+    tf.compat.v1.disable_eager_execution()
 
-    log_decode_mod_pl = tf.placeholder(shape=[],dtype=tf.float32,name="input_log_decode_mod")
+    secret_pl = tf.compat.v1.placeholder(shape=[None,args.secret_size],dtype=tf.float32,name="input_prep")
+    image_pl = tf.compat.v1.placeholder(shape=[None,height,width,3],dtype=tf.float32,name="input_hide")
+    M_pl = tf.compat.v1.placeholder(shape=[None,2,8],dtype=tf.float32,name="input_transform")
+    global_step_tensor = tf.Variable(0, trainable=False, name='global_step')
+    loss_scales_pl = tf.compat.v1.placeholder(shape=[4],dtype=tf.float32,name="input_loss_scales")
+    l2_edge_gain_pl = tf.compat.v1.placeholder(shape=[1],dtype=tf.float32,name="input_edge_gain")
+    yuv_scales_pl = tf.compat.v1.placeholder(shape=[3],dtype=tf.float32,name="input_yuv_scales")
+
+    log_decode_mod_pl = tf.compat.v1.placeholder(shape=[],dtype=tf.float32,name="input_log_decode_mod")
 
     encoder = models.StegaStampEncoder(height=height, width=width)
     decoder = models.StegaStampDecoder(secret_size=args.secret_size, height=height, width=width)
@@ -124,7 +126,7 @@ def main():
             args=args,
             global_step=global_step_tensor)
 
-    tvars=tf.trainable_variables()  #returns all variables created(the two variable scopes) and makes trainable true
+    tvars=tf.compat.v1.trainable_variables()  #returns all variables created(the two variable scopes) and makes trainable true
 
 
     d_vars=[var for var in tvars if 'discriminator' in var.name]
@@ -132,9 +134,9 @@ def main():
 
     clip_D = [p.assign(tf.clip_by_value(p, -0.01, 0.01)) for p in d_vars]
 
-    train_op = tf.train.AdamOptimizer(args.lr).minimize(loss_op, var_list=g_vars, global_step=global_step_tensor)
-    train_secret_op = tf.train.AdamOptimizer(args.lr).minimize(secret_loss_op, var_list=g_vars, global_step=global_step_tensor)
-    optimizer = tf.train.RMSPropOptimizer(.00001)
+    train_op = tf.compat.v1.train.AdamOptimizer(args.lr).minimize(loss_op, var_list=g_vars, global_step=global_step_tensor)
+    train_secret_op = tf.compat.v1.train.AdamOptimizer(args.lr).minimize(secret_loss_op, var_list=g_vars, global_step=global_step_tensor)
+    optimizer = tf.compat.v1.train.RMSPropOptimizer(.00001)
     gvs = optimizer.compute_gradients(D_loss_op, var_list=d_vars)
     capped_gvs = [(tf.clip_by_value(grad, -.25, .25), var) for grad, var in gvs]
     train_dis_op = optimizer.apply_gradients(capped_gvs)
@@ -142,13 +144,13 @@ def main():
     deploy_hide_image_op, residual_op = models.prepare_deployment_hiding_graph(encoder, secret_pl, image_pl)
     deploy_decoder_op =  models.prepare_deployment_reveal_graph(decoder, image_pl)
 
-    saver = tf.train.Saver(tf.trainable_variables(), max_to_keep=100, keep_checkpoint_every_n_hours=4)
-    sess.run(tf.global_variables_initializer())
+    saver = tf.compat.v1.train.Saver(tf.compat.v1.trainable_variables(), max_to_keep=100, keep_checkpoint_every_n_hours=4)
+    sess.run(tf.compat.v1.global_variables_initializer())
 
     if args.pretrained is not None:
         saver.restore(sess, args.pretrained)
 
-    writer = tf.summary.FileWriter(join(LOGS_Path,EXP_NAME),sess.graph)
+    writer = tf.compat.v1.summary.FileWriter(join(LOGS_Path,EXP_NAME),sess.graph)
 
     total_steps = len(files_list)//args.batch_size + 1
     global_step = 0
@@ -189,15 +191,15 @@ def main():
             if global_step % 100 ==0 :
                 summary, global_step = sess.run([summary_op,global_step_tensor], feed_dict)
                 writer.add_summary(summary, global_step)
-                summary = tf.Summary(value=[tf.Summary.Value(tag='transformer/rnd_tran', simple_value=rnd_tran),
-                                            tf.Summary.Value(tag='loss_scales/l2_loss_scale', simple_value=l2_loss_scale),
-                                            tf.Summary.Value(tag='loss_scales/lpips_loss_scale', simple_value=lpips_loss_scale),
-                                            tf.Summary.Value(tag='loss_scales/secret_loss_scale', simple_value=secret_loss_scale),
-                                            tf.Summary.Value(tag='loss_scales/y_scale', simple_value=args.y_scale),
-                                            tf.Summary.Value(tag='loss_scales/u_scale', simple_value=args.u_scale),
-                                            tf.Summary.Value(tag='loss_scales/v_scale', simple_value=args.v_scale),
-                                            tf.Summary.Value(tag='loss_scales/G_loss_scale', simple_value=G_loss_scale),
-                                            tf.Summary.Value(tag='loss_scales/L2_edge_gain', simple_value=l2_edge_gain),])
+                summary = tf.compat.v1.Summary(value=[tf.compat.v1.Summary.Value(tag='transformer/rnd_tran', simple_value=rnd_tran),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/l2_loss_scale', simple_value=l2_loss_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/lpips_loss_scale', simple_value=lpips_loss_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/secret_loss_scale', simple_value=secret_loss_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/y_scale', simple_value=args.y_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/u_scale', simple_value=args.u_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/v_scale', simple_value=args.v_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/G_loss_scale', simple_value=G_loss_scale),
+                                            tf.compat.v1.Summary.Value(tag='loss_scales/L2_edge_gain', simple_value=l2_edge_gain),])
                 writer.add_summary(summary, global_step)
 
             if global_step % 100 ==0 :
@@ -207,13 +209,13 @@ def main():
             if global_step % 10000 ==0:
                 save_path = saver.save(sess, join(CHECKPOINTS_PATH,EXP_NAME,EXP_NAME+".chkp"), global_step=global_step)
 
-    constant_graph_def = tf.graph_util.convert_variables_to_constants(
+    constant_graph_def = tf.compat.v1.graph_util.convert_variables_to_constants(
             sess,
             sess.graph.as_graph_def(),
             [deploy_hide_image_op.name[:-2], residual_op.name[:-2], deploy_decoder_op.name[:-2]])
-    with tf.Session(graph=tf.Graph()) as session:
+    with tf.compat.v1.Session(graph=tf.Graph()) as session:
         tf.import_graph_def(constant_graph_def, name='')
-        tf.saved_model.simple_save(session,
+        tf.compat.v1.saved_model.simple_save(session,
                                    SAVED_MODELS + '/' + EXP_NAME,
                                    inputs={'secret':secret_pl, 'image':image_pl},
                                    outputs={'stegastamp':deploy_hide_image_op, 'residual':residual_op, 'decoded':deploy_decoder_op})

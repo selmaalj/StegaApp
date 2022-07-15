@@ -27,7 +27,8 @@ If you find our work useful, please consider citing:
 git clone --recurse-submodules https://github.com/tancik/StegaStamp.git
 cd StegaStamp
 ```
-- Install tensorflow (tested with tf 1.13)
+- Install tensorflow 2.9.1
+- Install tensorflow-addons 0.17.1
 - Python 3 required
 - Download dependencies
 ```bash=

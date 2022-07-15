@@ -4,7 +4,6 @@ import os
 from PIL import Image,ImageOps
 import numpy as np
 import tensorflow as tf
-import tensorflow.contrib.image
 from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
 
@@ -29,19 +28,19 @@ def main():
         print('Missing input image')
         return
 
-    sess = tf.InteractiveSession(graph=tf.Graph())
+    sess = tf.compat.v1.InteractiveSession(graph=tf.Graph())
 
-    model = tf.saved_model.loader.load(sess, [tag_constants.SERVING], args.model)
+    model = tf.compat.v1.saved_model.loader.load(sess, [tag_constants.SERVING], args.model)
 
     input_secret_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['secret'].name
     input_image_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['image'].name
-    input_secret = tf.get_default_graph().get_tensor_by_name(input_secret_name)
-    input_image = tf.get_default_graph().get_tensor_by_name(input_image_name)
+    input_secret = tf.compat.v1.get_default_graph().get_tensor_by_name(input_secret_name)
+    input_image = tf.compat.v1.get_default_graph().get_tensor_by_name(input_image_name)
 
     output_stegastamp_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['stegastamp'].name
     output_residual_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['residual'].name
-    output_stegastamp = tf.get_default_graph().get_tensor_by_name(output_stegastamp_name)
-    output_residual = tf.get_default_graph().get_tensor_by_name(output_residual_name)
+    output_stegastamp = tf.compat.v1.get_default_graph().get_tensor_by_name(output_stegastamp_name)
+    output_residual = tf.compat.v1.get_default_graph().get_tensor_by_name(output_residual_name)
 
     width = 400
     height = 400

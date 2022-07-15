@@ -46,14 +46,14 @@ def order_points(pts):
 
 def main():
     # Initializing network
-    config = tf.ConfigProto()
+    config = tf.compat.v1.ConfigProto()
     config.gpu_options.allow_growth = True
     detector_graph = tf.Graph()
     decoder_graph = tf.Graph()
 
     with detector_graph.as_default():
-        detector_sess = tf.Session()
-        detector_model = tf.saved_model.loader.load(detector_sess, [tag_constants.SERVING], args.detector_model)
+        detector_sess = tf.compat.v1.Session()
+        detector_model = tf.compat.v1.saved_model.loader.load(detector_sess, [tag_constants.SERVING], args.detector_model)
 
         detector_input_name = detector_model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['image'].name
         detector_input = detector_graph.get_tensor_by_name(detector_input_name)
@@ -62,8 +62,8 @@ def main():
         detector_output = detector_graph.get_tensor_by_name(detector_output_name)
 
     with decoder_graph.as_default():
-        decoder_sess = tf.Session()
-        decoder_model = tf.saved_model.loader.load(decoder_sess, [tag_constants.SERVING], args.decoder_model)
+        decoder_sess = tf.compat.v1.Session()
+        decoder_model = tf.compat.v1.saved_model.loader.load(decoder_sess, [tag_constants.SERVING], args.decoder_model)
 
         decoder_input_name = decoder_model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['image'].name
         decoder_input = decoder_graph.get_tensor_by_name(decoder_input_name)
