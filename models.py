@@ -4,13 +4,14 @@ import tensorflow as tf
 import tensorflow_addons as tfa
 
 import utils
-from tensorflow.python.keras.models import *
+from tensorflow.python.\
+    keras.models import *
 from tensorflow.python.keras.layers import *
 
 from stn import spatial_transformer_network as stn_transformer
 
 class StegaStampEncoder(Layer):
-    def __init__(self, height, width):
+    def __init__(self):
         super(StegaStampEncoder, self).__init__()
         self.secret_dense = Dense(7500, activation='relu', kernel_initializer='he_normal')
 
@@ -182,6 +183,7 @@ def get_secret_acc(secret_true,secret_pred):
         bit_acc = tf.reduce_sum(input_tensor=correct_pred) / tf.size(input=secret_pred, out_type=tf.int64)
         return bit_acc, str_acc
 
+
 def build_model(encoder,
                 decoder,
                 discriminator,
@@ -189,7 +191,6 @@ def build_model(encoder,
                 image_input,
                 l2_edge_gain,
                 borders,
-                secret_size,
                 M,
                 loss_scales,
                 yuv_scales,

@@ -3,7 +3,6 @@ import bchlib
 import tensorflow as tf
 import argparse
 import numpy as np
-import tensorflow.contrib.image
 from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
 
@@ -13,7 +12,7 @@ parser.add_argument('--decoder_model', type=str, required=True)
 parser.add_argument('--video', type=str, required=True)
 parser.add_argument('--secret_size', type=int, default=100)
 parser.add_argument('--save_video', type=str, default=None)
-parser.add_argument('--visualize_detector', action='store_true', help='Visualize detector mask output')
+parser.add_argument('--visualize_detector', default=False, action='store_true', help='Visualize detector mask output')
 args = parser.parse_args()
 
 BCH_POLYNOMIAL = 137
