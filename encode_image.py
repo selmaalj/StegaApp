@@ -8,7 +8,7 @@ from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
 
 BCH_POLYNOMIAL = 137
-BCH_BITS = 5
+BCH_BITS = 15
 
 def main():
     import argparse
@@ -45,7 +45,7 @@ def main():
     width = 400
     height = 400
 
-    bch = bchlib.BCH(BCH_POLYNOMIAL, BCH_BITS)
+    bch = bchlib.BCH(BCH_BITS, prim_poly=BCH_POLYNOMIAL)
 
     if len(args.secret) > 7:
         print('Error: Can only encode 56bits (7 characters) with ECC')

@@ -28,15 +28,16 @@ def main():
 
     sess = tf.compat.v1.InteractiveSession(graph=tf.Graph())
 
-    model = tf.compat.v1.saved_model.loader.load(sess, [tag_constants.SERVING], args.model)
-
+    model = tf.compat.v1.saved_model.load(sess, [tag_constants.SERVING], args.model)
+    #model =  tf.saved_model.load(args.model, tags=[tag_constants.SERVING])
+    
     input_image_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['image'].name
     input_image = tf.compat.v1.get_default_graph().get_tensor_by_name(input_image_name)
 
     output_secret_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['decoded'].name
     output_secret = tf.compat.v1.get_default_graph().get_tensor_by_name(output_secret_name)
 
-    bch = bchlib.BCH(BCH_POLYNOMIAL, BCH_BITS)
+    bch = bchlib.BCH(BCH_BITS, prim_poly=BCH_POLYNOMIAL)
 
     for filename in files_list:
         image = Image.open(filename).convert("RGB")
@@ -53,12 +54,12 @@ def main():
 
         data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
 
-        bitflips = bch.decode_inplace(data, ecc)
+        bitflips = bch.decode(data, ecc)
 
         if bitflips != -1:
             try:
                 code = data.decode("utf-8")
-                print(filename, code)
+                print("Uspjeloo", filename, code)
                 continue
             except:
                 continue
