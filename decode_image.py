@@ -59,7 +59,6 @@ def main():
         if bitflips != -1:
             try:
                 code = data.decode("utf-8")
-                print("Uspjeloo", filename, code)
                 continue
             except:
                 continue

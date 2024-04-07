@@ -8,7 +8,7 @@ from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
 
 BCH_POLYNOMIAL = 137
-BCH_BITS = 15
+BCH_BITS = 5
 
 def main():
     import argparse
