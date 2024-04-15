@@ -2,6 +2,9 @@ __pycache__/
 logs/
 data/
 checkpoints/
-detector_models/
-saved_models/
-out/
+algorithm/detector_models/
+algorithm/saved_models/
+algorithm/out/
+algorithm/out1/
+algorithm/slika.jpeg
+algorithm/dataset/
