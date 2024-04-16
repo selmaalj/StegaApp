@@ -38,7 +38,7 @@ def main():
     output_secret = tf.compat.v1.get_default_graph().get_tensor_by_name(output_secret_name)
 
     bch = bchlib.BCH(BCH_BITS, prim_poly=BCH_POLYNOMIAL)
-
+    result=""
     for filename in files_list:
         image = Image.open(filename).convert("RGB")
         image = np.array(ImageOps.fit(image,(400, 400)),dtype=np.float32)
@@ -55,16 +55,15 @@ def main():
         data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
 
         bitflips = bch.decode(data, ecc)
-
         if bitflips != -1:
             try:
                 code = data.decode("utf-8")
-                print(filename, code)
+                result=code
                 continue
             except:
                 continue
         print(filename, 'Failed to decode')
-
+    return result
 
 if __name__ == "__main__":
-    main()
+    print(main())

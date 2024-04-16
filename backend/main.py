@@ -27,7 +27,8 @@ def get_db():
 db_dependency: Type[Session] = Depends(get_db)
 secret=None
 
-@app.post("/image/")
+#generating unique code and saving that code and url into database 
+@app.post("/image/") 
 async def create_image(image: ImageBase, db: Session = db_dependency):
     global secret
     unique_code=generate_unique_code(db)
@@ -39,7 +40,8 @@ async def create_image(image: ImageBase, db: Session = db_dependency):
     secret=unique_code
     return db_image
 
-@app.get("/url/") #za dobijanje url-a preko koda
+#getting url based on hidden code
+@app.get("/url/") 
 async def get_image(code: str, db: Session = db_dependency): 
     result=db.query(database_models.Images).filter(database_models.Images.code==code).first()
     if not result:
@@ -49,11 +51,13 @@ async def get_image(code: str, db: Session = db_dependency):
 def generate_unique_code(session: Session):
     characters = string.ascii_letters + string.digits 
     while True:
-        unique_code = ''.join(random.choices(characters, k=7)) #duzina 7 karaktera
+        unique_code = ''.join(random.choices(characters, k=7)) #7 characters long
         if not session.query(database_models.Images).filter_by(code=unique_code).first():
             return unique_code
-        
-@app.post("/encode-image/")
+
+#executing script encode_image.py with already generated unique code
+#returning encoded image    
+@app.get("/encode-image/")
 async def encode_image(image: UploadFile = File(...)):
     global secret
     with open(image.filename, "wb") as buffer:
@@ -77,3 +81,24 @@ async def encode_image(image: UploadFile = File(...)):
     encoded_image_path = os.path.join("out", hidden_filename)
 
     return StreamingResponse(open(encoded_image_path, "rb"), media_type="image/png")
+
+#executing script decode_image.py
+#returning decoded code 
+@app.post("/decode-image/") 
+async def decode_image(image: UploadFile = File(...), db: Session = db_dependency):
+    with open(image.filename, "wb") as buffer:
+        buffer.write(await image.read())
+    script_path = os.path.join(os.path.dirname(__file__), "decode_image.py")
+
+    command = [
+        "python", script_path,
+        "saved_models/stegastamp_pretrained",
+        "--image", "out/"+image.filename
+    ]
+    result = subprocess.run(command, capture_output=True, text=True)
+    if result.returncode == 0:
+        output_lines = result.stdout.strip().splitlines()
+        decoded_output = output_lines[-1]  
+        return {"output": decoded_output}
+    else:
+        return {"error": result.stderr.strip()}
