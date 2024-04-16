@@ -2,10 +2,10 @@ __pycache__/
 logs/
 data/
 checkpoints/
-algorithm/detector_models/
-algorithm/saved_models/
-algorithm/out/
-algorithm/out1/
-algorithm/slika.jpeg
-algorithm/dataset/
-algorithm/detector_img.py
+backend/detector_models/
+backend/saved_models/
+backend/out/
+backend/out1/
+backend/slika.jpeg
+backend/dataset/
+backend/detector_img.py
