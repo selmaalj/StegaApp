@@ -76,8 +76,11 @@ def main():
     
     cap = cv2.VideoCapture(0)  # Open the camera
 
-    f_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    f_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    
+    ret, frame = cap.read()
+    f_height, f_width = frame.shape[0:2]
 
     bch = bchlib.BCH(BCH_BITS, prim_poly=BCH_POLYNOMIAL)
 
@@ -87,6 +90,7 @@ def main():
 
     while True:
         ret, frame = cap.read()
+
         if ret is None:
             break
         
