@@ -11,7 +11,7 @@ const Screen1 = ({ navigation }) => {
         <View style={styles.overlay}>
           <Text style={styles.title}>Welcome to StegaStamp</Text>
           <Text style={styles.description}>
-            StegaStamp is a powerful tool for hiding urls within images. 
+            StegaStamp is a powerful tool for hiding text or urls within images. 
             Utilizing steganography techniques, it allows you to securely transmit informations and 
             to detect them.
           </Text>
@@ -29,6 +29,7 @@ const styles = StyleSheet.create({
     flex: 1,
     resizeMode: 'cover',
     justifyContent: 'center',
+    opacity: 0.9
   },
   overlay: {
     backgroundColor: 'rgba(0,0,0,0.5)',

@@ -70,20 +70,28 @@ def main():
         decoder_output_name = decoder_model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['decoded'].name
         decoder_output = decoder_graph.get_tensor_by_name(decoder_output_name)
 
-    cap = cv2.VideoCapture(args.video)
-    bch = bchlib.BCH(BCH_POLYNOMIAL, BCH_BITS)
+    if args.video.lower() != 'camera':
+        #cap = cv2.VideoCapture(args.video)
+        return
+    
+    cap = cv2.VideoCapture(0)  # Open the camera
 
-    ret, frame = cap.read()
-    f_height, f_width = frame.shape[0:2]
+    f_width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    f_height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+
+    bch = bchlib.BCH(BCH_BITS, prim_poly=BCH_POLYNOMIAL)
 
     if args.save_video is not None:
         fourcc1 = cv2.VideoWriter_fourcc(*'XVID')
         out = cv2.VideoWriter(args.save_video, fourcc1, 30.0, (f_width, f_height))
 
-    while(True):
+    while True:
         ret, frame = cap.read()
-        if frame is None:
+        if ret is None:
             break
+        
+        #print(ret)
+        
         frame_rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
         detector_image_input = cv2.resize(frame_rgb, (1024,1024))
@@ -165,7 +173,12 @@ def main():
 
                 data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
 
-                bitflips = bch.decode_inplace(data, ecc)
+                print("Dataa", data)
+                print("Ecc", ecc)
+
+                bitflips = bch.decode(data, ecc)
+                
+                print(bitflips)
 
                 if bitflips != -1:
                     print('Num bits corrected: ', bitflips)
@@ -177,6 +190,7 @@ def main():
                     cv2.polylines(frame, np.int32([corners]), thickness=6, color=color, isClosed=True)
                     font = cv2.FONT_HERSHEY_SIMPLEX
                     im = cv2.putText(frame, code, tuple((corners[0,:]+np.array([0,-15])).astype(np.int)), font, 1,(0,0,0), 2, cv2.LINE_AA)
+                    print(code)
 
         if args.save_video is not None:
             out.write(frame)

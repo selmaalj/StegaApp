@@ -1,3 +1,4 @@
+import asyncio
 from typing import Type, Optional
 from fastapi import FastAPI, File, HTTPException, Depends, UploadFile
 from fastapi.responses import StreamingResponse
@@ -26,20 +27,19 @@ def get_db():
 db_dependency: Type[Session] = Depends(get_db)
 secret=None
 
-#generating unique code and saving that code and url into database 
-@app.post("/image/") 
+#generating unique code and saving that code and url or text into database 
+@app.put("/image/") 
 async def create_image(image: ImageBase, db: Session = db_dependency):
     global secret
     unique_code=generate_unique_code(db)
-    full_url="http://"+image.url
-    db_image=database_models.Images(url=full_url, code=unique_code)
+    db_image=database_models.Images(url=image.url, code=unique_code)
     db.add(db_image)
     db.commit()
     db.refresh(db_image)
     secret=unique_code
     return db_image
 
-#getting url based on hidden code
+#getting url or text based on hidden code
 @app.get("/url/") 
 async def get_image(code: str, db: Session = db_dependency): 
     result=db.query(database_models.Images).filter(database_models.Images.code==code).first()
@@ -101,3 +101,21 @@ async def decode_image(image: UploadFile = File(...), db: Session = db_dependenc
         return {"output": decoded_output}
     else:
         return {"error": result.stderr.strip()}
+
+@app.post("/detect/")
+async def detect_objects():
+    script_path = os.path.join(os.path.dirname(__file__), "detector.py")
+
+    command = [
+        "python", script_path,
+        "--detector_model", "detector_models/stegastamp_detector",
+        "--decoder_model", "saved_models/stegastamp_pretrained",
+        "--video", "camera",  # Use "camera" as the video input
+        #"--save_video", "out_videos",
+    ]
+
+    process = subprocess.Popen(command, stdin=subprocess.PIPE)
+    process.stdin.close()
+    process.wait()
+
+    return {"output": "Detection process completed."}
