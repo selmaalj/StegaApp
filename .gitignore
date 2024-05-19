@@ -5,9 +5,11 @@ checkpoints/
 backend/detector_models/
 backend/saved_models/
 backend/out/
-backend/out1/
 backend/dataset/
 backend/detector_img.py
 backend/*.jpeg
 backend/*.jpg
 backend/*.png
+backend/*.mp4
+backend/processing_steps/
+backend/proces_image.py

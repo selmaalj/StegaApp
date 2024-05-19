@@ -56,7 +56,7 @@ def generate_unique_code(session: Session):
 
 #executing script encode_image.py with already generated unique code
 #returning encoded image    
-@app.get("/encode-image/")
+@app.post("/encode-image/")
 async def encode_image(image: UploadFile = File(...)):
     global secret
     with open(image.filename, "wb") as buffer:
@@ -98,24 +98,6 @@ async def decode_image(image: UploadFile = File(...), db: Session = db_dependenc
     if result.returncode == 0:
         output_lines = result.stdout.strip().splitlines()
         decoded_output = output_lines[-1]  
-        return {"output": decoded_output}
+        return {"code": decoded_output}
     else:
         return {"error": result.stderr.strip()}
-
-@app.post("/detect/")
-async def detect_objects():
-    script_path = os.path.join(os.path.dirname(__file__), "detector.py")
-
-    command = [
-        "python", script_path,
-        "--detector_model", "detector_models/stegastamp_detector",
-        "--decoder_model", "saved_models/stegastamp_pretrained",
-        "--video", "camera",  # Use "camera" as the video input
-        #"--save_video", "out_videos",
-    ]
-
-    process = subprocess.Popen(command, stdin=subprocess.PIPE)
-    process.stdin.close()
-    process.wait()
-
-    return {"output": "Detection process completed."}
