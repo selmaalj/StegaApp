@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 import random, string
 import subprocess, os
 import cv2, io, numpy as np
+import json
 
 app = FastAPI()
 database_models.Base.metadata.create_all(bind=engine)
@@ -101,3 +102,23 @@ async def decode_image(image: UploadFile = File(...), db: Session = db_dependenc
         return {"code": decoded_output}
     else:
         return {"error": result.stderr.strip()}
+
+@app.post("/detect-image/")
+async def detect_image(image: UploadFile = File(...)):
+    image_path = image.filename
+    with open(image_path, "wb") as buffer:
+        buffer.write(await image.read())
+
+    script_path = os.path.join(os.path.dirname(__file__), "detect_image.py")
+
+    command = ["python", script_path, image_path]
+    result = subprocess.run(command, capture_output=True, text=True)
+    
+    if result.returncode == 0:
+        try:
+            output = json.loads(result.stdout)
+            return {"output": "Detection process completed.", "result": output}
+        except json.JSONDecodeError:
+            return {"output": "Detection process failed.", "stderr": "Failed to parse script output as JSON.", "stdout": result.stdout, "stderr": result.stderr}
+    else:
+        return {"output": "Detection process failed.", "stdout": result.stdout, "stderr": result.stderr}
