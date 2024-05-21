@@ -138,7 +138,10 @@ def main(image_path):
     
     aligned_image = align_image(original_image, corners.reshape(4, 2))
     decoded_data = decode_secret(aligned_image)
-    result = {"status": "success", "code": decoded_data, "message": "Image processing and decoding completed successfully."}
+    if decoded_data=="Failed to decode":
+        result = {"status": "error", "message": "Failed to decode."}
+    else:
+        result = {"status": "success", "code": decoded_data, "message": "Image processing and decoding completed successfully."}
     print(json.dumps(result))
 
 if __name__ == "__main__":

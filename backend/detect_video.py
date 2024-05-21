@@ -8,6 +8,7 @@ import tensorflow as tf
 from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
 import bchlib
+import json
 
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
@@ -111,8 +112,6 @@ def decode_secret(image):
     packet = bytearray(packet)
 
     data, ecc = packet[:-bch.ecc_bytes], packet[-bch.ecc_bytes:]
-    print(data)
-    print(ecc)
     bitflips = bch.decode(data, ecc)
     if bitflips != -1:
         try:
@@ -123,40 +122,37 @@ def decode_secret(image):
     return "Failed to decode"
 
 
-def main(video_path):
-    cap = cv2.VideoCapture(video_path)
+def main():
+    #cap = cv2.VideoCapture(video_path)
+    cap = cv2.VideoCapture(0)
     if not cap.isOpened():
-        print(f"Error: Video file '{video_path}' could not be opened.")
+        #print(f"Error: Video file '{video_path}' could not be opened.")
+        print(f"Error: Camera could not be opened.")
         return
     
-    frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    print(f"Total frames in the video: {frame_count}")
-
-    for frame_index in range(frame_count):
-        cap.set(cv2.CAP_PROP_POS_FRAMES, frame_index)
+    while True:
         ret, frame = cap.read()
         if not ret:
-            print(f"Error reading frame {frame_index}. Skipping...")
-            continue
+            print("Error reading frame from camera. Exiting...")
+            break
 
         # Process the frame
         preprocessed_image = preprocess_image(frame)
         corners = find_corners_of_largest_polygon(preprocessed_image)
         if corners is None:
-            print(f"Could not find the corners of a quadrilateral in frame {frame_index}. Skipping...")
             continue
         aligned_image = align_image(frame, corners.reshape(4, 2))
         
         # Decode the secret from the aligned image
         decoded_data = decode_secret(aligned_image)
-        print(f"Decoded data from frame {frame_index}: {decoded_data}")
-
+        if decoded_data=="Failed to decode":
+            continue
+        else:
+            result = {"status": "success", "code": decoded_data, "message": "Image processing and decoding completed successfully."}
+            print(json.dumps(result))
+            break
     cap.release()
-    print("Video processing and decoding completed successfully.")
+    print("Camera processing and decoding completed successfully.")
 
 if __name__ == "__main__":
-    if len(sys.argv) > 1:
-        video_path = sys.argv[1]
-        main(video_path)
-    else:
-        print("Usage: script_name.py <video_path>")
+    main()

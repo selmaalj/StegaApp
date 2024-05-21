@@ -10,6 +10,7 @@ import random, string
 import subprocess, os
 import cv2, io, numpy as np
 import json
+import re
 
 app = FastAPI()
 database_models.Base.metadata.create_all(bind=engine)
@@ -122,3 +123,25 @@ async def detect_image(image: UploadFile = File(...)):
             return {"output": "Detection process failed.", "stderr": "Failed to parse script output as JSON.", "stdout": result.stdout, "stderr": result.stderr}
     else:
         return {"output": "Detection process failed.", "stdout": result.stdout, "stderr": result.stderr}
+    
+@app.post("/detect-frames/")
+async def detect_frames():
+    script_path = os.path.join(os.path.dirname(__file__), "detect_video.py")
+
+    command = [
+        "python", script_path, 
+    ]
+
+    process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+    stdout, stderr = process.communicate()
+
+    if process.returncode == 0:
+        match = re.search(r'{"status": "success", "code": ".*?", "message": "Image processing and decoding completed successfully."}', stdout)
+        if match:
+            result_json_str = match.group(0)
+            result_dict = json.loads(result_json_str)
+        else:
+            result_dict = None
+        return { "output": "Detection process completed.", "result": result_dict}
+    else:
+        return {"output": "Detection process failed.", "stdout": stdout, "stderr": stderr}
