@@ -10,20 +10,25 @@ export default function Screen3() {
   const localIp = '192.168.1.102'; 
   const port = '8000';
 
-  const handleGetImage = async () => {
+  const handleGetImage = async (code) => {
     try {
-      const res = await fetch(`http://${localIp}:${port}/url/?code=ZvivT1A`);
+      const res = await fetch(`http://${localIp}:${port}/url/?code=${code}`);
       const data = await res.json();
-      console.log('Url within image:', data.url); //uzimanje url-od koda koji se dobije iz enkodirane slike
+      if(data.url === undefined){
+        Alert.alert('No detection', 'Nothing is detected in the provided image.');
+        return;
+      }
+      console.log('Url within image:', data.url); 
+      clickHandlerOpenUrlOrText(data.url);
     } catch (error) {
       console.error('Error:', error);
     }
   };
 
-  const handleDecodeImage = async (imageUri) => {
+  const handleDecodeImage = async () => {
     const formData = new FormData();
     formData.append('image', {
-      uri: imageUri,
+      uri: hiddenImage,
       type: 'image/jpeg', 
       name: 'hiddenImage.jpg', 
     });
@@ -38,6 +43,7 @@ export default function Screen3() {
       });
       const data = await res.json();
       console.log('Decoded image:', data);
+      handleGetImage(data.code);
     } catch (error) {
       console.error(error);
     }
@@ -56,7 +62,6 @@ export default function Screen3() {
         setImage(result.assets[0].uri);
       } else if (imageType === 'hiddenImage') {
         setHiddenImage(result.assets[0].uri);
-        handleDecodeImage(result.assets[0].uri);
       }
     }
   };
@@ -66,22 +71,28 @@ export default function Screen3() {
     // Implement saving image logic 
   };
 
-  const clickHandlerOpenUrlOrText = async (inputData) => {
+  const clickHandlerOpenUrlOrText = async (openingDialog) => {
     console.log('Fetching Data...');
     try {
-      if (isValidURL(inputData)) {
-        console.log('Opening URL:', inputData);
-        await Linking.openURL(inputData);
+      if (isValidURL(openingDialog)) {
+        console.log('Checking if URL can be opened:', openingDialog);
+        const canOpen = await Linking.canOpenURL(openingDialog);
+        if (canOpen) {
+          console.log('Opening URL:', openingDialog);
+          await Linking.openURL(openingDialog);
+        } else {
+          console.log('URL cannot be opened:', openingDialog);
+          Alert.alert('URL cannot be opened', 'The provided URL cannot be opened.');
+        }
       } else {
-        console.log('Opening dialog with text:', inputData);
-        Alert.alert('Text Content', inputData);
+        console.log('Opening dialog with text:', openingDialog);
+        Alert.alert('Image content', openingDialog);
       }
     } catch (error) {
       console.error('Error handling input data:', error);
     }
   };
 
-  // Function to check if the input is a valid URL
   const isValidURL = (input) => {
     try {
       new URL(input);
@@ -130,10 +141,9 @@ export default function Screen3() {
         </View>
       )}
       <View style={styles.buttonContainer}>
-        <Button title="Show data" color="#8C0000" onPress={() => clickHandlerOpenUrlOrText(url)} />
+        <Button title="Show hidden data" color="#8C0000" onPress={() => handleDecodeImage()} />
       </View>
       <Text style={styles.urlText}>{url}</Text>
-      <Button title="Get Image" onPress={handleGetImage} />
     </ScrollView>
   );
 }
