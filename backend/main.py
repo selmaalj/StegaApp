@@ -11,8 +11,19 @@ import subprocess, os
 import cv2, io, numpy as np
 import json
 import re
+from fastapi.middleware.cors import CORSMiddleware
+import tempfile
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 database_models.Base.metadata.create_all(bind=engine)
 
 class ImageBase(BaseModel):
@@ -87,22 +98,30 @@ async def encode_image(image: UploadFile = File(...)):
 #returning decoded code 
 @app.post("/decode-image/") 
 async def decode_image(image: UploadFile = File(...), db: Session = db_dependency):
-    with open(image.filename, "wb") as buffer:
-        buffer.write(await image.read())
-    script_path = os.path.join(os.path.dirname(__file__), "decode_image.py")
+    # Save the uploaded file to a temporary location
+    with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        tmp.write(await image.read())
+        tmp_path = tmp.name
 
+    # Construct the command to pass to subprocess
+    script_path = os.path.join(os.path.dirname(__file__), "decode_image.py")
     command = [
         "python", script_path,
         "saved_models/stegastamp_pretrained",
-        "--image", "out/"+image.filename
+        "--image", tmp_path
     ]
-    result = subprocess.run(command, capture_output=True, text=True)
-    if result.returncode == 0:
-        output_lines = result.stdout.strip().splitlines()
-        decoded_output = output_lines[-1]  
-        return {"code": decoded_output}
-    else:
-        return {"error": result.stderr.strip()}
+
+    try:
+        # Run the command and capture the output
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode == 0:
+            output_lines = result.stdout.strip().splitlines()
+            decoded_output = output_lines[-1]  
+            return {"code": decoded_output}
+        else:
+            return {"error": result.stderr.strip()} 
+    finally:
+        os.remove(tmp_path)
 
 @app.post("/detect-image/")
 async def detect_image(image: UploadFile = File(...)):
