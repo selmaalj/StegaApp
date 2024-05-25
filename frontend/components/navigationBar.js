@@ -59,9 +59,9 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     height: 60,
-    backgroundColor: '#FBEAE5', // Customize as needed
+    backgroundColor: '#FBEAE5', 
     borderTopWidth: 1,
-    borderTopColor: '#ccc', // Customize as needed
+    borderTopColor: '#ccc',
   },
   tabItem: {
     flex: 1,

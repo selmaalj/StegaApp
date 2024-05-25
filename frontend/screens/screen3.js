@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
+import { decode, encode } from 'base64-arraybuffer';
 
 export default function Screen3() {
   const [url, setUrl] = useState('');
   const [image, setImage] = useState(null);
   const [hiddenImage, setHiddenImage] = useState(null);
   const [isUrlInput, setIsUrlInput] = useState(true)
+  const [encodedImage, setEncodedImage] = useState(null);
 
   const localIp = '192.168.1.102'; 
   const port = '8000';
@@ -50,6 +52,49 @@ export default function Screen3() {
       console.error(error);
     }
   };
+
+  const handleCreateImage = async () => {
+    try {
+      const res = await fetch(`http://${localIp}:${port}/image/`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      console.log(data.code);
+      handleEncodeImage();
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
+  const handleEncodeImage = async () => {
+    const formData = new FormData();
+    formData.append('image', {
+      uri: image,
+      type: 'image/jpeg', 
+      name: 'hiddenImage.jpg', 
+    });
+  
+    try {
+      const res = await fetch(`http://${localIp}:${port}/encode-image/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      const imageData = await res.arrayBuffer(); 
+      const base64Image = encode(new Uint8Array(imageData)); 
+      const imageUrl = `data:image/png;base64,${base64Image}`; 
+      setEncodedImage(imageUrl); 
+    } catch (error) {
+      console.error(error);
+    }
+  };
+  
 
   const pickImage = async (imageType) => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -113,7 +158,7 @@ export default function Screen3() {
         minimumValue={0}
         maximumValue={1}
         step={1}
-        minimumTrackTintColor="#007AFF"
+        minimumTrackTintColor="#273076"
         maximumTrackTintColor="#000000"
         thumbTintColor="#FFF"
         onValueChange={(value) => setIsUrlInput(value === 0)}
@@ -142,8 +187,12 @@ export default function Screen3() {
         </View>
       )}
       <View style={styles.buttonContainer}>
-        <Button title="Encode" color="#8C0000" onPress={clickHandlerSave} />
+        <Button title="Encode" color="#8C0000" onPress={handleCreateImage} />
       </View>
+
+      {/* Display the encoded image */}
+      {encodedImage && <Image source={{ uri: encodedImage }} style={styles.image} />}
+
       <Text style={styles.boldText}>Decode image</Text>
       <Text style={styles.text}>Upload encoded image to get text or URL within</Text>
       <View style={styles.buttonContainer}>
@@ -151,13 +200,12 @@ export default function Screen3() {
       </View>
       {hiddenImage && (
         <View style={styles.imageContainer}>
-          <Image source={{ uri: hiddenImage }} style={styles.image} />
+          <Image source={{ uri: hiddenImage }} style={styles.hiddenImage} />
         </View>
       )}
       <View style={styles.buttonContainer}>
         <Button title="Show hidden data" color="#8C0000" onPress={() => handleDecodeImage()} />
       </View>
-      <Text style={styles.urlText}>{url}</Text>
     </ScrollView>
   );
 }
@@ -204,6 +252,12 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     resizeMode: 'contain',
+  },
+  hiddenImage: {
+    width: 300,
+    height: 300,
+    alignSelf: 'center',
+    margin: 20,
   },
   slider: {
     width: '30%',
