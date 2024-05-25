@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert } from 'react-native';
+import { StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
+import Slider from '@react-native-community/slider';
 
 export default function Screen3() {
   const [url, setUrl] = useState('');
   const [image, setImage] = useState(null);
   const [hiddenImage, setHiddenImage] = useState(null);
+  const [isUrlInput, setIsUrlInput] = useState(true)
 
   const localIp = '192.168.1.102'; 
   const port = '8000';
@@ -105,20 +107,32 @@ export default function Screen3() {
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <Text style={styles.boldText}>Encode image</Text>
-      <Text style={styles.text}>Insert URL</Text>
-      <TextInput 
-        style={styles.input}
-        placeholder='e.g. https://google.com'
-        onChangeText={newUrl => setUrl(newUrl)}
-        value={url}
+      <Text style={styles.text}>Insert Content</Text>
+      <Slider
+        style={styles.slider}
+        minimumValue={0}
+        maximumValue={1}
+        step={1}
+        minimumTrackTintColor="#007AFF"
+        maximumTrackTintColor="#000000"
+        thumbTintColor="#FFF"
+        onValueChange={(value) => setIsUrlInput(value === 0)}
       />
-      <Text style={styles.text}>Or insert text</Text>
-      <TextInput 
-        style={styles.input}
-        placeholder='e.g. Lorem ipsum dolor sit amet...'
-        onChangeText={newUrl => setUrl(newUrl)}
-        value={url}
-      />
+      {isUrlInput ? (
+        <TextInput 
+          style={styles.input}
+          placeholder='e.g. https://google.com'
+          onChangeText={newUrl => setUrl(newUrl)}
+          value={url}
+        />
+      ) : (
+        <TextInput 
+          style={styles.input}
+          placeholder='e.g. Lorem ipsum dolor sit amet...'
+          onChangeText={newUrl => setUrl(newUrl)}
+          value={url}
+        />
+      )}
       <View style={styles.buttonContainer}>
         <Button title="upload image" color="#8C8CFF" onPress={() => pickImage('image')} />
       </View>
@@ -190,5 +204,14 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     resizeMode: 'contain',
+  },
+  slider: {
+    width: '30%',
+    height: 35,
+    margin: 5,
+    alignSelf: 'center',
+    backgroundColor: '#BEBEBE',
+    borderRadius: 50,
+    borderWidth: 0.3,
   },
 });
