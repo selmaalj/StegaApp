@@ -1,8 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import {StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
 import { decode, encode } from 'base64-arraybuffer';
+import * as MediaLibrary from 'expo-media-library';
+import { FontAwesome } from '@expo/vector-icons'; 
+import * as FileSystem from 'expo-file-system';
+
+console.log(MediaLibrary)
 
 export default function Screen3() {
   const [url, setUrl] = useState('');
@@ -10,6 +15,7 @@ export default function Screen3() {
   const [hiddenImage, setHiddenImage] = useState(null);
   const [isUrlInput, setIsUrlInput] = useState(true)
   const [encodedImage, setEncodedImage] = useState(null);
+  const [hasPermission, setHasPermission] = useState(null);
 
   const localIp = '192.168.1.102'; 
   const port = '8000';
@@ -113,9 +119,29 @@ export default function Screen3() {
     }
   };
 
-  const clickHandlerSave = () => {
-    console.log('Saving image...');
-    // Implement saving image logic 
+  const downloadImage = async () => {
+    try {
+      const granted = await MediaLibrary.requestPermissionsAsync();
+      if (granted.status === 'granted') {
+        const base64Code = encodedImage.split("data:image/png;base64,")[1];
+  
+        const timestamp = new Date().getTime();
+        const randomString = Math.random().toString(36).substring(7);
+        const filename = `${FileSystem.documentDirectory}${timestamp}_${randomString}.png`;
+  
+        await FileSystem.writeAsStringAsync(filename, base64Code, {
+          encoding: FileSystem.EncodingType.Base64,
+        });
+  
+        const mediaResult = await MediaLibrary.saveToLibraryAsync(filename);
+        Alert.alert('Success', 'Image downloaded successfully!');
+      } else {
+        Alert.alert('Permission Denied', 'Permission to access media library was denied.');
+      }
+    } catch (error) {
+      console.error('Error downloading image:', error);
+      Alert.alert('Error', 'Failed to download image.');
+    }
   };
 
   const clickHandlerOpenUrlOrText = async (openingDialog) => {
@@ -191,8 +217,16 @@ export default function Screen3() {
       </View>
 
       {/* Display the encoded image */}
-      {encodedImage && <Image source={{ uri: encodedImage }} style={styles.image} />}
+      {encodedImage  && (
+        <View style={styles.imageContainer}>
+          <Image source={{ uri: encodedImage }} style={styles.image} />
+          <TouchableOpacity onPress={downloadImage}>
+        <FontAwesome name="download" size={24} color="black" />
+      </TouchableOpacity>
+        </View>
+      )}
 
+      
       <Text style={styles.boldText}>Decode image</Text>
       <Text style={styles.text}>Upload encoded image to get text or URL within</Text>
       <View style={styles.buttonContainer}>
@@ -200,7 +234,7 @@ export default function Screen3() {
       </View>
       {hiddenImage && (
         <View style={styles.imageContainer}>
-          <Image source={{ uri: hiddenImage }} style={styles.hiddenImage} />
+          <Image source={{ uri: hiddenImage }} style={styles.image} />
         </View>
       )}
       <View style={styles.buttonContainer}>
@@ -252,12 +286,6 @@ const styles = StyleSheet.create({
     width: 300,
     height: 300,
     resizeMode: 'contain',
-  },
-  hiddenImage: {
-    width: 300,
-    height: 300,
-    alignSelf: 'center',
-    margin: 20,
   },
   slider: {
     width: '30%',
