@@ -7,17 +7,14 @@ import * as MediaLibrary from 'expo-media-library';
 import { FontAwesome } from '@expo/vector-icons'; 
 import * as FileSystem from 'expo-file-system';
 
-console.log(MediaLibrary)
-
 export default function Screen3() {
   const [url, setUrl] = useState('');
   const [image, setImage] = useState(null);
   const [hiddenImage, setHiddenImage] = useState(null);
   const [isUrlInput, setIsUrlInput] = useState(true)
   const [encodedImage, setEncodedImage] = useState(null);
-  const [hasPermission, setHasPermission] = useState(null);
 
-  const localIp = '192.168.1.102'; 
+  const localIp = '192.168.0.19'; 
   const port = '8000';
 
   const handleGetImage = async (code) => {
@@ -293,7 +290,7 @@ const styles = StyleSheet.create({
     margin: 5,
     alignSelf: 'center',
     backgroundColor: '#BEBEBE',
-    borderRadius: 50,
+    borderRadius: 30,
     borderWidth: 0.3,
   },
 });
