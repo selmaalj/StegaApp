@@ -58,7 +58,7 @@ const NavigationBar = ({ state, descriptors, navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
-    height: 60,
+    height: 70,
     backgroundColor: '#FBEAE5', 
     borderTopWidth: 1,
     borderTopColor: '#ccc',

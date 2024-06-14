@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
-import {StyleSheet, Text, View, Button, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
+import {StyleSheet, Text, View, TextInput, Linking, Image, ScrollView, Alert, TouchableOpacity } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import Slider from '@react-native-community/slider';
 import { decode, encode } from 'base64-arraybuffer';
 import * as MediaLibrary from 'expo-media-library';
 import { FontAwesome } from '@expo/vector-icons'; 
 import * as FileSystem from 'expo-file-system';
+import { manipulateAsync, FlipType, SaveFormat } from 'expo-image-manipulator';
+
 
 export default function Screen3() {
   const [url, setUrl] = useState('');
@@ -59,24 +61,33 @@ export default function Screen3() {
   const handleCreateImage = async () => {
     try {
       const res = await fetch(`http://${localIp}:${port}/image/`, {
-        method: 'PUT',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ url }),
       });
       const data = await res.json();
-      console.log(data.code);
+      console.log("Image created", data.code);
       handleEncodeImage();
     } catch (error) {
       console.error(error);
     }
   };
 
+  const correctImageOrientation = async (uri) => {
+    const manipResult = await manipulateAsync(
+      uri,
+      [{ rotate: 0 }], 
+      { compress: 1, format: 'jpeg', base64: false }
+    );
+    return manipResult.uri;
+  };
+
   const handleEncodeImage = async () => {
     const formData = new FormData();
     formData.append('image', {
-      uri: image,
+      uri: image, 
       type: 'image/jpeg', 
       name: 'hiddenImage.jpg', 
     });
@@ -97,15 +108,15 @@ export default function Screen3() {
       console.error(error);
     }
   };
-  
 
   const pickImage = async (imageType) => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
       quality: 1,
+      allowsEditing: false,
     });
 
-    console.log(result);
+    console.log("Image picked", result);
 
     if (!result.canceled) {
       if (imageType === 'image') {
@@ -142,7 +153,6 @@ export default function Screen3() {
   };
 
   const clickHandlerOpenUrlOrText = async (openingDialog) => {
-    console.log('Fetching Data...');
     try {
       if (isValidURL(openingDialog)) {
         console.log('Checking if URL can be opened:', openingDialog);
@@ -182,8 +192,8 @@ export default function Screen3() {
         maximumValue={1}
         step={1}
         minimumTrackTintColor="#273076"
-        maximumTrackTintColor="#000000"
-        thumbTintColor="#FFF"
+        maximumTrackTintColor="#FFF"
+        thumbTintColor="#BEBEBE"
         onValueChange={(value) => setIsUrlInput(value === 0)}
       />
       {isUrlInput ? (
@@ -201,17 +211,25 @@ export default function Screen3() {
           value={url}
         />
       )}
+
       <View style={styles.buttonContainer}>
-        <Button title="upload image" color="#8C8CFF" onPress={() => pickImage('image')} />
+      <TouchableOpacity style={styles.button1} onPress={() => pickImage('image')} >
+      <Text style={styles.buttonText}>UPLOAD IMAGE</Text>
+      </TouchableOpacity>
       </View>
+
       {image && (
         <View style={styles.imageContainer}>
           <Image source={{ uri: image }} style={styles.image} />
         </View>
       )}
+
       <View style={styles.buttonContainer}>
-        <Button title="Encode" color="#8C0000" onPress={handleCreateImage} />
+      <TouchableOpacity style={styles.button2} onPress={handleCreateImage} >
+      <Text style={styles.buttonText}>ENCODE</Text>
+      </TouchableOpacity>
       </View>
+
 
       {/* Display the encoded image */}
       {encodedImage  && (
@@ -226,16 +244,22 @@ export default function Screen3() {
       
       <Text style={styles.boldText}>Decode image</Text>
       <Text style={styles.text}>Upload encoded image to get text or URL within</Text>
+
       <View style={styles.buttonContainer}>
-        <Button title="upload image" color="#8C8CFF" onPress={() => pickImage('hiddenImage')} />
+      <TouchableOpacity style={styles.button1} onPress={() => pickImage('hiddenImage')} >
+      <Text style={styles.buttonText}>UPLOAD IMAGE</Text>
+      </TouchableOpacity>
       </View>
+
       {hiddenImage && (
         <View style={styles.imageContainer}>
           <Image source={{ uri: hiddenImage }} style={styles.image} />
         </View>
       )}
       <View style={styles.buttonContainer}>
-        <Button title="Show hidden data" color="#8C0000" onPress={() => handleDecodeImage()} />
+      <TouchableOpacity style={styles.button2} onPress={() => handleDecodeImage()} >
+      <Text style={styles.buttonText}>SHOW HIDDEN DATA</Text>
+      </TouchableOpacity>
       </View>
     </ScrollView>
   );
@@ -257,23 +281,20 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontWeight: 'bold',
   },
-  urlText: {
-    marginTop: 10,
-    fontSize: 16,
-  },
   buttonContainer: {
-    borderRadius: 20,
     borderWidth: 0.2,
     borderColor: '#fff',
     overflow: 'hidden',
     marginTop: 10,
+    alignItems: 'center'
   },
   input: {
     borderWidth: 1,
     borderColor: '#777',
-    padding: 8,
+    padding: 12,
     marginVertical: 10,
     width: '100%',
+    fontSize: 18
   },
   imageContainer: {
     marginTop: 20,
@@ -285,12 +306,28 @@ const styles = StyleSheet.create({
     resizeMode: 'contain',
   },
   slider: {
-    width: '30%',
-    height: 35,
-    margin: 5,
+    width: '20%',
+    margin: 10,
     alignSelf: 'center',
-    backgroundColor: '#BEBEBE',
-    borderRadius: 30,
-    borderWidth: 0.3,
+    backgroundColor: "#ADD8E6",//"#03045E",
+    borderRadius: 20,
+  },
+  button1: {
+    backgroundColor: "#ADD8E6",
+    padding: 10,
+    borderRadius: 40,
+    width: 150,
+  },
+  button2: {
+    backgroundColor: "#8C0000",
+    padding: 10,
+    borderRadius: 40,
+    width: 150
+  },
+  buttonText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center'
   },
 });

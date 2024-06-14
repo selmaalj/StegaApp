@@ -41,7 +41,7 @@ db_dependency: Type[Session] = Depends(get_db)
 secret=None
 
 #generating unique code and saving that code and url or text into database 
-@app.put("/image/") 
+@app.post("/image/") 
 async def create_image(image: ImageBase, db: Session = db_dependency):
     global secret
     unique_code=generate_unique_code(db)
