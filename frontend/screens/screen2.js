@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions } from 'react-native';
+import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions, Linking } from 'react-native';
 import { FontAwesome, FontAwesome6 } from '@expo/vector-icons'; 
 
 const localIp = '192.168.0.19'; 

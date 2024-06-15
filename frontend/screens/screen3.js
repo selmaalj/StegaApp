@@ -112,8 +112,10 @@ export default function Screen3() {
   const pickImage = async (imageType) => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.All,
-      quality: 1,
-      allowsEditing: false,
+      quality: 0.5,  // Compress image to half of its original quality
+      maxWidth: 800, // Restrict the maximum width
+      maxHeight: 800, // Restrict the maximum height
+      allowsEditing: true,
     });
 
     console.log("Image picked", result);

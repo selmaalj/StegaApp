@@ -13,6 +13,7 @@ import json
 import re
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
+from io import BytesIO
 
 app = FastAPI()
 
@@ -125,23 +126,44 @@ async def decode_image(image: UploadFile = File(...), db: Session = db_dependenc
 
 @app.post("/detect-image/")
 async def detect_image(image: UploadFile = File(...)):
-    image_path = image.filename
-    with open(image_path, "wb") as buffer:
-        buffer.write(await image.read())
+    try:
+        # Read the image file into memory
+        image_data = await image.read()
+        image_stream = BytesIO(image_data)
 
-    script_path = os.path.join(os.path.dirname(__file__), "detect_image.py")
+        # Save the image to a temporary file
+        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+            tmp.write(image_data)
+            tmp_path = tmp.name
 
-    command = ["python", script_path, image_path]
-    result = subprocess.run(command, capture_output=True, text=True)
-    
-    if result.returncode == 0:
+        # Construct the command to pass to subprocess
+        script_path = os.path.join(os.path.dirname(__file__), "detect_image.py")
+        command = ["python", script_path, tmp_path]
+
+        # Run the command asynchronously
+        process = await asyncio.create_subprocess_exec(
+            *command,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
+
+        stdout, stderr = await process.communicate()
+
+        # Remove the temporary file
+        os.remove(tmp_path)
+
+        if process.returncode != 0:
+            raise HTTPException(status_code=500, detail=f"Subprocess error: {stderr.decode()}")
+
         try:
-            output = json.loads(result.stdout)
+            # Parse the JSON output from the script
+            output = json.loads(stdout)
             return {"output": "Detection process completed.", "result": output}
         except json.JSONDecodeError:
-            return {"output": "Detection process failed.", "stderr": "Failed to parse script output as JSON.", "stdout": result.stdout, "stderr": result.stderr}
-    else:
-        return {"output": "Detection process failed.", "stdout": result.stdout, "stderr": result.stderr}
+            raise HTTPException(status_code=500, detail="Failed to parse script output as JSON")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 @app.post("/detect-frames/")
 async def detect_frames():
