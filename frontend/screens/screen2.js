@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert} from 'react-native';
+import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions } from 'react-native';
+import { FontAwesome, FontAwesome6 } from '@expo/vector-icons'; 
 
 const localIp = '192.168.0.19'; 
 const port = '8000';
@@ -28,8 +29,8 @@ export default function Screen2() {
         <Text style={styles.boldText}>Detect message</Text>
         <Text style={styles.text}>Capture image with your camera to find its hidden message</Text>
         <View style={styles.buttonContainer2}>
-        <TouchableOpacity style={styles.button} onPress={requestPermission}>
-        <Text style={styles.captureText}>Open Camera</Text>
+        <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
+          <Text style={styles.buttonText}>OPEN CAMERA</Text>
         </TouchableOpacity>
         </View>
       </View>
@@ -40,8 +41,14 @@ export default function Screen2() {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
+  const handleOpenCameraWithPermission = async () => {
+    await requestPermission();
+    setCameraOpen(true);
+  };
+
   function closeCamera() {
     setCameraOpen(false);
+    setCapturedPhoto(null);
   }
 
   async function takePicture() {
@@ -131,13 +138,16 @@ export default function Screen2() {
 
   return (
     <View style={styles.container}>
-      {cameraOpen && (
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+      {cameraOpen ? (
+      <Fragment>
+        <CameraView ref={cameraRef} style={styles.camera} facing={facing} >
           <View style={styles.buttonContainer}>
             <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-              <Text style={styles.text}>Flip Camera</Text>
+            <FontAwesome6 name="camera-rotate" size={28} color="white"/>
             </TouchableOpacity>
-            <Button onPress={closeCamera} title="Close Camera" color="#8C8CFF" />
+            <TouchableOpacity style={styles.button} onPress={closeCamera}>
+              <FontAwesome name="close" size={30} color="white"/>
+            </TouchableOpacity>
           </View>
           <View style={styles.captureButtonContainer}>
             <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
@@ -151,7 +161,18 @@ export default function Screen2() {
             </View>
           )}
         </CameraView>
-      )}
+      </Fragment>
+      ) : 
+      <Fragment>
+        <Text style={styles.boldText}>Detect message</Text>
+        <Text style={styles.text}>Capture image with your camera to find its hidden message</Text>
+        <View style={styles.buttonContainer2}>
+        <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
+          <Text style={styles.buttonText}>OPEN CAMERA</Text>
+        </TouchableOpacity>
+        </View>
+        </Fragment>
+      }
     </View>
   );
 }
@@ -163,7 +184,8 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   camera: {
-    flex: 1,
+    width: '100%',
+    height: '50%'
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -178,6 +200,7 @@ const styles = StyleSheet.create({
     borderColor: '#fff',
     overflow: 'hidden',
     marginTop: 10,
+    alignItems: 'center',
   },
   button: {
     alignSelf: 'flex-end',
@@ -190,7 +213,6 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 10,
-    color: '#fff',
   },
   captureButtonContainer: {
     position: 'absolute',
