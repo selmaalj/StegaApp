@@ -6,8 +6,6 @@ import { decode, encode } from 'base64-arraybuffer';
 import * as MediaLibrary from 'expo-media-library';
 import { FontAwesome } from '@expo/vector-icons'; 
 import * as FileSystem from 'expo-file-system';
-import { manipulateAsync, FlipType, SaveFormat } from 'expo-image-manipulator';
-
 
 export default function Screen3() {
   const [url, setUrl] = useState('');
@@ -15,9 +13,20 @@ export default function Screen3() {
   const [hiddenImage, setHiddenImage] = useState(null);
   const [isUrlInput, setIsUrlInput] = useState(true)
   const [encodedImage, setEncodedImage] = useState(null);
+  const [urlError, setUrlError] = useState('');
 
   const localIp = '192.168.0.19'; 
   const port = '8000';
+  const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+
+  const handleUrlChange = (newUrl) => {
+    setUrl(newUrl);
+    if (!urlPattern.test(newUrl)) {
+      setUrlError('Please enter a valid URL starting with http:// or https://');
+    } else {
+      setUrlError('');
+    }
+  };
 
   const handleGetImage = async (code) => {
     try {
@@ -35,6 +44,10 @@ export default function Screen3() {
   };
 
   const handleDecodeImage = async () => {
+    if (!hiddenImage) {
+      Alert.alert('Error', 'Please upload an image to decode.');
+      return;
+    }
     const formData = new FormData();
     formData.append('image', {
       uri: hiddenImage,
@@ -59,6 +72,16 @@ export default function Screen3() {
   };
 
   const handleCreateImage = async () => {
+    if (!url) {
+      Alert.alert('Error', 'Please provide a URL or text to encode.');
+      return;
+    }
+
+    if (!image) {
+      Alert.alert('Error', 'Please upload an image to encode.');
+      return;
+    }
+
     try {
       const res = await fetch(`http://${localIp}:${port}/image/`, {
         method: 'POST',
@@ -73,15 +96,6 @@ export default function Screen3() {
     } catch (error) {
       console.error(error);
     }
-  };
-
-  const correctImageOrientation = async (uri) => {
-    const manipResult = await manipulateAsync(
-      uri,
-      [{ rotate: 0 }], 
-      { compress: 1, format: 'jpeg', base64: false }
-    );
-    return manipResult.uri;
   };
 
   const handleEncodeImage = async () => {
@@ -199,12 +213,15 @@ export default function Screen3() {
         onValueChange={(value) => setIsUrlInput(value === 0)}
       />
       {isUrlInput ? (
+        <>
         <TextInput 
           style={styles.input}
           placeholder='e.g. https://google.com'
-          onChangeText={newUrl => setUrl(newUrl)}
+          onChangeText={handleUrlChange}
           value={url}
         />
+        {urlError ? <Text style={styles.errorText}>{urlError}</Text> : null}
+        </>
       ) : (
         <TextInput 
           style={styles.input}
@@ -277,6 +294,11 @@ const styles = StyleSheet.create({
     marginTop: 10,
     fontSize: 18,
     marginBottom: 5,
+  },
+  errorText: {
+    fontSize: 12,
+    marginBottom: 5,
+    color: '#8B0000'
   },
   boldText: {
     marginTop: 30,

@@ -3,15 +3,15 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions, Linking } from 'react-native';
 import { FontAwesome, FontAwesome6 } from '@expo/vector-icons'; 
 
-const localIp = '192.168.0.19'; 
-const port = '8000';
-
 export default function Screen2() {
   const [facing, setFacing] = useState('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraOpen, setCameraOpen] = useState(false);
   const [capturedPhoto, setCapturedPhoto] = useState(null); 
   const cameraRef = useRef(null); 
+  
+  const localIp = '192.168.0.19'; 
+  const port = '8000';
 
   useEffect(() => {
     if (permission && permission.granted) {
