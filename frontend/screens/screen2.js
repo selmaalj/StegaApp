@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef, Fragment } from 'react';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Dimensions, Linking } from 'react-native';
-import { FontAwesome, FontAwesome6 } from '@expo/vector-icons'; 
+import { Button, Image, StyleSheet, Text, TouchableOpacity, View, Alert, Linking } from 'react-native';
+import { FontAwesome, FontAwesome6 } from '@expo/vector-icons';
 
 export default function Screen2() {
   const [facing, setFacing] = useState('back');
   const [permission, requestPermission] = useCameraPermissions();
   const [cameraOpen, setCameraOpen] = useState(false);
-  const [capturedPhoto, setCapturedPhoto] = useState(null); 
-  const cameraRef = useRef(null); 
-  
-  const localIp = '192.168.0.19'; 
+  const [capturedPhoto, setCapturedPhoto] = useState(null);
+  const cameraRef = useRef(null);
+
+  const localIp = '192.168.1.100';
   const port = '8000';
 
   useEffect(() => {
@@ -29,9 +29,9 @@ export default function Screen2() {
         <Text style={styles.boldText}>Detect message</Text>
         <Text style={styles.text}>Capture image with your camera to find its hidden message</Text>
         <View style={styles.buttonContainer2}>
-        <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
-          <Text style={styles.buttonText}>OPEN CAMERA</Text>
-        </TouchableOpacity>
+          <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
+            <Text style={styles.buttonText}>OPEN CAMERA</Text>
+          </TouchableOpacity>
         </View>
       </View>
     );
@@ -41,9 +41,11 @@ export default function Screen2() {
     setFacing(current => (current === 'back' ? 'front' : 'back'));
   }
 
-  const handleOpenCameraWithPermission = async () => {
-    await requestPermission();
-    setCameraOpen(true);
+  async function handleOpenCameraWithPermission() {
+    const newPermission = await requestPermission();
+    if (newPermission.granted) {
+      setCameraOpen(true);
+    }
   };
 
   function closeCamera() {
@@ -54,10 +56,10 @@ export default function Screen2() {
   async function takePicture() {
     if (cameraRef.current) {
       try {
-        const photo = await cameraRef.current.takePictureAsync(); 
-        console.log('Photo:', photo); 
-        setCapturedPhoto(photo.uri); 
-        handleDetectImage(photo.uri)
+        const photo = await cameraRef.current.takePictureAsync();
+        console.log('Photo:', photo);
+        setCapturedPhoto(photo.uri);
+        handleDetectImage(photo.uri);
       } catch (error) {
         console.error('Failed to take picture:', error);
       }
@@ -68,8 +70,8 @@ export default function Screen2() {
     const formData = new FormData();
     formData.append('image', {
       uri: photoUri,
-      type: 'image/jpeg', 
-      name: 'photo.jpg', 
+      type: 'image/jpeg',
+      name: 'photo.jpg',
     });
 
     try {
@@ -83,7 +85,7 @@ export default function Screen2() {
 
       const data = await response.json();
       console.log(data);
-      if(data.result.status=="success"){
+      if (data.result.status === "success") {
         handleGetImage(data.result.code);
       }
     } catch (error) {
@@ -95,11 +97,11 @@ export default function Screen2() {
     try {
       const res = await fetch(`http://${localIp}:${port}/url/?code=${code}`);
       const data = await res.json();
-      if(data.url === undefined){
+      if (data.url === undefined) {
         Alert.alert('No detection', 'Nothing is detected in the provided image.');
         return;
       }
-      console.log('Url within image:', data.url); 
+      console.log('Url within image:', data.url);
       clickHandlerOpenUrlOrText(data.url);
     } catch (error) {
       console.error('Error:', error);
@@ -139,40 +141,40 @@ export default function Screen2() {
   return (
     <View style={styles.container}>
       {cameraOpen ? (
-      <Fragment>
-        <CameraView ref={cameraRef} style={styles.camera} facing={facing} >
-          <View style={styles.buttonContainer}>
-            <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
-            <FontAwesome6 name="camera-rotate" size={28} color="white"/>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.button} onPress={closeCamera}>
-              <FontAwesome name="close" size={30} color="white"/>
-            </TouchableOpacity>
-          </View>
-          <View style={styles.captureButtonContainer}>
-            <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-              <Text style={styles.buttonText}>CAPTURE</Text>
-            </TouchableOpacity>
-          </View>
-          {capturedPhoto && (
-            <View style={styles.previewContainer}>
-              <Text style={styles.previewText}>Captured Photo:</Text>
-              <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
+        <Fragment>
+          <CameraView ref={cameraRef} style={styles.camera} facing={facing}>
+            <View style={styles.buttonContainer}>
+              <TouchableOpacity style={styles.button} onPress={toggleCameraFacing}>
+                <FontAwesome6 name="camera-rotate" size={28} color="white" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.button} onPress={closeCamera}>
+                <FontAwesome name="close" size={30} color="white" />
+              </TouchableOpacity>
             </View>
-          )}
-        </CameraView>
-      </Fragment>
-      ) : 
-      <Fragment>
-        <Text style={styles.boldText}>Detect message</Text>
-        <Text style={styles.text}>Capture image with your camera to find its hidden message</Text>
-        <View style={styles.buttonContainer2}>
-        <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
-          <Text style={styles.buttonText}>OPEN CAMERA</Text>
-        </TouchableOpacity>
-        </View>
+            <View style={styles.captureButtonContainer}>
+              <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+                <Text style={styles.buttonText}>CAPTURE</Text>
+              </TouchableOpacity>
+            </View>
+            {capturedPhoto && (
+              <View style={styles.previewContainer}>
+                <Text style={styles.previewText}>Captured Photo:</Text>
+                <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
+              </View>
+            )}
+          </CameraView>
         </Fragment>
-      }
+      ) : (
+        <Fragment>
+          <Text style={styles.boldText}>Detect message</Text>
+          <Text style={styles.text}>Capture image with your camera to find its hidden message</Text>
+          <View style={styles.buttonContainer2}>
+            <TouchableOpacity style={styles.captureButton} onPress={handleOpenCameraWithPermission}>
+              <Text style={styles.buttonText}>OPEN CAMERA</Text>
+            </TouchableOpacity>
+          </View>
+        </Fragment>
+      )}
     </View>
   );
 }
@@ -185,7 +187,7 @@ const styles = StyleSheet.create({
   },
   camera: {
     width: '100%',
-    height: '50%'
+    height: '50%',
   },
   buttonContainer: {
     flexDirection: 'row',
