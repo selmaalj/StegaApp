@@ -79,7 +79,10 @@ def main():
 
             residual = (residual * 255).astype(np.uint8)
 
-            save_name = filename.split('/')[-1].split('.')[0]
+            if args.image is not None:
+                save_name = filename.split('/')[-1].split('.')[0]
+            else:
+                save_name = os.path.basename(filename)
 
             im = Image.fromarray(np.array(rescaled))
             im.save(args.save_dir + '/'+save_name+'_hidden.png')
