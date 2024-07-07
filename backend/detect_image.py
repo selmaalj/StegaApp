@@ -51,7 +51,7 @@ def find_corners_of_largest_polygon(image):
         save_processing_step_image(polygon_img, "05_approx_polygon")
         return polygon
     else:
-        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=20)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=110, minLineLength=50, maxLineGap=10)
         if lines is not None:
             points = []
             for line in lines:

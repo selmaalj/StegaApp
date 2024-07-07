@@ -156,12 +156,6 @@ export default function Screen2() {
                 <Text style={styles.buttonText}>CAPTURE</Text>
               </TouchableOpacity>
             </View>
-            {capturedPhoto && (
-              <View style={styles.previewContainer}>
-                <Text style={styles.previewText}>Captured Photo:</Text>
-                <Image source={{ uri: capturedPhoto }} style={styles.previewImage} />
-              </View>
-            )}
           </CameraView>
         </Fragment>
       ) : (
@@ -187,7 +181,7 @@ const styles = StyleSheet.create({
   },
   camera: {
     width: '100%',
-    height: '50%',
+    height: '65%',
   },
   buttonContainer: {
     flexDirection: 'row',
