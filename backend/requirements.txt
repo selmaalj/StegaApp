@@ -1,5 +1,7 @@
+algorithm==1.2.0
 astropy==6.0.0
 bchlib==1.0.0
+data==0.4
 dominate==2.9.1
 fastapi==0.111.0
 ipython==8.12.3
@@ -14,7 +16,7 @@ python-dotenv==1.0.1
 rawpy==0.19.1
 scipy==1.14.0
 six==1.16.0
-skimage==0.0
+scikit-image==0.24.0
 SQLAlchemy==2.0.29
 stn==1.0.1
 tensorflow==2.12.0
