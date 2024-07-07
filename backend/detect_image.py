@@ -21,7 +21,11 @@ def save_processing_step_image(image, image_name):
     cv2.imwrite(path, image)
 
 def preprocess_image(image):
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # Convert to grayscale if the image is not already in grayscale
+    if len(image.shape) == 3 and image.shape[2] == 3:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image
     save_processing_step_image(gray, "01_gray")
     gray_blurred = cv2.GaussianBlur(gray, (5, 5), 0)
     save_processing_step_image(gray_blurred, "02_gray_blurred")
@@ -31,28 +35,30 @@ def find_corners_of_largest_polygon(image):
     edges = cv2.Canny(image, 50, 150)
     save_processing_step_image(edges, "03_edges")
     contours, _ = cv2.findContours(edges, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    if not contours:
+        return None
+
     largest_contour = sorted(contours, key=cv2.contourArea, reverse=True)[0]
-
-    contour_img = cv2.drawContours(image.copy(), [largest_contour], -1, (0,255,0), 3)
-
+    contour_img = cv2.drawContours(image.copy(), [largest_contour], -1, (0, 255, 0), 3)
     save_processing_step_image(contour_img, "04_largest_contour")
 
-    epsilon = 0.01 * cv2.arcLength(largest_contour, True)
+    epsilon = 0.02 * cv2.arcLength(largest_contour, True)
     polygon = cv2.approxPolyDP(largest_contour, epsilon, True)
 
     if len(polygon) == 4:
-        polygon_img = cv2.drawContours(image.copy(), [polygon], -1, (255,0,0), 3)
+        polygon_img = cv2.drawContours(image.copy(), [polygon], -1, (255, 0, 0), 3)
         save_processing_step_image(polygon_img, "05_approx_polygon")
         return polygon
     else:
-        lines = cv2.HoughLinesP(edges, 1, np.pi/180, threshold=100, minLineLength=100, maxLineGap=10)
+        lines = cv2.HoughLinesP(edges, 1, np.pi / 180, threshold=50, minLineLength=50, maxLineGap=20)
         if lines is not None:
             points = []
             for line in lines:
                 x1, y1, x2, y2 = line[0]
                 points.extend([(x1, y1), (x2, y2)])
             hull = cv2.convexHull(np.array(points))
-            epsilon = 0.01 * cv2.arcLength(hull, True)
+            epsilon = 0.02 * cv2.arcLength(hull, True)
             polygon = cv2.approxPolyDP(hull, epsilon, True)
             if len(polygon) == 4:
                 return polygon
