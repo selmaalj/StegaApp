@@ -14,3 +14,4 @@ backend/*.mp4
 backend/processing_steps/
 backend/proces_image.py
 backend/experiment/*.png
+backend/.env
