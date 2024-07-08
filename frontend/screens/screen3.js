@@ -15,7 +15,7 @@ export default function Screen3() {
   const [encodedImage, setEncodedImage] = useState(null);
   const [urlError, setUrlError] = useState('');
 
-  const localIp = '192.168.1.100'; 
+  const localIp = '192.168.0.22'; 
   const port = '8000';
   const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 

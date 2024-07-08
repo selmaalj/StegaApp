@@ -15,3 +15,5 @@ backend/processing_steps/
 backend/proces_image.py
 backend/experiment/*.png
 backend/.env
+node_modules
+backend/test_env/

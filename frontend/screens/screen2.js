@@ -10,7 +10,7 @@ export default function Screen2() {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const cameraRef = useRef(null);
 
-  const localIp = '192.168.1.100';
+  const localIp = '192.168.0.22';
   const port = '8000';
 
   useEffect(() => {
