@@ -15,8 +15,11 @@ export default function Screen3() {
   const [encodedImage, setEncodedImage] = useState(null);
   const [urlError, setUrlError] = useState('');
 
-  const localIp = '192.168.0.22'; 
-  const port = '8000';
+  //const localIp = '192.168.0.22'; 
+  //const port = '8000';
+
+  const webaddress = 'https://stegaapp.onrender.com/'
+
   const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
   const handleUrlChange = (newUrl) => {
@@ -30,7 +33,7 @@ export default function Screen3() {
 
   const handleGetImage = async (code) => {
     try {
-      const res = await fetch(`http://${localIp}:${port}/url/?code=${code}`);
+      const res = await fetch(`${webaddress}/url/?code=${code}`);
       const data = await res.json();
       if(data.url === undefined){
         Alert.alert('No detection', 'Nothing is detected in the provided image.');
@@ -56,7 +59,7 @@ export default function Screen3() {
     });
 
     try {
-      const res = await fetch(`http://${localIp}:${port}/decode-image/`, {
+      const res = await fetch(`${webaddress}/decode-image/`, {
         method: 'POST',
         body: formData,
         headers: {
@@ -83,7 +86,7 @@ export default function Screen3() {
     }
 
     try {
-      const res = await fetch(`http://${localIp}:${port}/image/`, {
+      const res = await fetch(`${webaddress}/image/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -107,7 +110,7 @@ export default function Screen3() {
     });
   
     try {
-      const res = await fetch(`http://${localIp}:${port}/encode-image/`, {
+      const res = await fetch(`${webaddress}/encode-image/`, {
         method: 'POST',
         body: formData,
         headers: {

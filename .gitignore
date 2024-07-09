@@ -4,7 +4,6 @@ data/
 checkpoints/
 backend/detector_models/
 backend/saved_models/
-backend/out/
 backend/dataset/
 backend/detector_img.py
 backend/*.jpeg

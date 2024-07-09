@@ -10,8 +10,10 @@ export default function Screen2() {
   const [capturedPhoto, setCapturedPhoto] = useState(null);
   const cameraRef = useRef(null);
 
-  const localIp = '192.168.0.22';
-  const port = '8000';
+  //const localIp = '192.168.0.22';
+  //const port = '8000';
+
+  const webaddress = 'https://stegaapp.onrender.com/'
 
   useEffect(() => {
     if (permission && permission.granted) {
@@ -75,7 +77,7 @@ export default function Screen2() {
     });
 
     try {
-      const response = await fetch(`http://${localIp}:${port}/detect-image/`, {
+      const response = await fetch(`${webaddress}/detect-image/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -95,7 +97,7 @@ export default function Screen2() {
 
   const handleGetImage = async (code) => {
     try {
-      const res = await fetch(`http://${localIp}:${port}/url/?code=${code}`);
+      const res = await fetch(`${webaddress}/url/?code=${code}`);
       const data = await res.json();
       if (data.url === undefined) {
         Alert.alert('No detection', 'Nothing is detected in the provided image.');
