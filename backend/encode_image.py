@@ -1,11 +1,13 @@
 import bchlib
 import glob
 import os
-from PIL import Image,ImageOps
+from PIL import Image, ImageOps
 import numpy as np
 import tensorflow as tf
-from tensorflow.python.saved_model import tag_constants
 from tensorflow.python.saved_model import signature_constants
+
+import logging
+tf.get_logger().setLevel(logging.ERROR)
 
 BCH_POLYNOMIAL = 137
 BCH_BITS = 5
@@ -28,19 +30,9 @@ def main():
         print('Missing input image')
         return
 
-    sess = tf.compat.v1.InteractiveSession(graph=tf.Graph())
-
-    model = tf.compat.v1.saved_model.loader.load(sess, [tag_constants.SERVING], args.model)
-
-    input_secret_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['secret'].name
-    input_image_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].inputs['image'].name
-    input_secret = tf.compat.v1.get_default_graph().get_tensor_by_name(input_secret_name)
-    input_image = tf.compat.v1.get_default_graph().get_tensor_by_name(input_image_name)
-
-    output_stegastamp_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['stegastamp'].name
-    output_residual_name = model.signature_def[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY].outputs['residual'].name
-    output_stegastamp = tf.compat.v1.get_default_graph().get_tensor_by_name(output_stegastamp_name)
-    output_residual = tf.compat.v1.get_default_graph().get_tensor_by_name(output_residual_name)
+    # Load the model using the TF2.x API
+    model = tf.saved_model.load(args.model)
+    infer = model.signatures[signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY]
 
     width = 400
     height = 400
@@ -51,13 +43,13 @@ def main():
         print('Error: Can only encode 56bits (7 characters) with ECC')
         return
 
-    data = bytearray(args.secret + ' '*(7-len(args.secret)), 'utf-8')
+    data = bytearray(args.secret + ' ' * (7 - len(args.secret)), 'utf-8')
     ecc = bch.encode(data)
     packet = data + ecc
 
     packet_binary = ''.join(format(x, '08b') for x in packet)
     secret = [int(x) for x in packet_binary]
-    secret.extend([0,0,0,0])
+    secret.extend([0, 0, 0, 0])
 
     if args.save_dir is not None:
         if not os.path.exists(args.save_dir):
@@ -65,18 +57,23 @@ def main():
         size = (width, height)
         for filename in files_list:
             image = Image.open(filename).convert("RGB")
-            image = np.array(ImageOps.fit(image,size),dtype=np.float32)
+            image = np.array(ImageOps.fit(image, size), dtype=np.float32)
             image /= 255.
 
-            feed_dict = {input_secret:[secret],
-                         input_image:[image]}
+            # Prepare inputs
+            input_dict = {
+                'secret': tf.convert_to_tensor([secret], dtype=tf.float32),
+                'image': tf.convert_to_tensor([image], dtype=tf.float32)
+            }
 
-            hidden_img, residual = sess.run([output_stegastamp, output_residual],feed_dict=feed_dict)
+            # Run inference
+            result = infer(**input_dict)
+            hidden_img = result['stegastamp'].numpy()
+            residual = result['residual'].numpy()
 
             rescaled = (hidden_img[0] * 255).astype(np.uint8)
             raw_img = (image * 255).astype(np.uint8)
-            residual = residual[0]+.5
-
+            residual = residual[0] + .5
             residual = (residual * 255).astype(np.uint8)
 
             if args.image is not None:
@@ -85,10 +82,10 @@ def main():
                 save_name = os.path.basename(filename)
 
             im = Image.fromarray(np.array(rescaled))
-            im.save(args.save_dir + '/'+save_name+'_hidden.png')
+            im.save(args.save_dir + '/' + save_name + '_hidden.png')
 
             im = Image.fromarray(np.squeeze(np.array(residual)))
-            im.save(args.save_dir + '/'+save_name+'_residual.png')
+            im.save(args.save_dir + '/' + save_name + '_residual.png')
 
 if __name__ == "__main__":
     main()

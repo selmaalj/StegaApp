@@ -88,9 +88,6 @@ async def encode_image(image: UploadFile = File(...)):
     original_filename = os.path.splitext(image.filename)[0]
     hidden_filename = f"{original_filename}_hidden.png"
 
-    if hidden_filename not in os.listdir("out"):
-        raise FileNotFoundError(f"Hidden image file '{hidden_filename}' not found in 'out' directory")
-
     encoded_image_path = os.path.join("out", hidden_filename)
 
     return StreamingResponse(open(encoded_image_path, "rb"), media_type="image/png")

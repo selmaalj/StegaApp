@@ -18,7 +18,7 @@ export default function Screen3() {
   //const localIp = '192.168.0.22'; 
   //const port = '8000';
 
-  const webaddress = 'https://stegaapp.onrender.com/'
+  const webaddress = 'https://stegaapp.onrender.com'
 
   const urlPattern = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
