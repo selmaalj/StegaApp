@@ -14,6 +14,7 @@ import re
 from fastapi.middleware.cors import CORSMiddleware
 import tempfile
 from io import BytesIO
+from encode_image import encode_image_function
 
 app = FastAPI()
 
@@ -73,24 +74,20 @@ def generate_unique_code(session: Session):
 @app.post("/encode-image/")
 async def encode_image(image: UploadFile = File(...)):
     global secret
-    with open(image.filename, "wb") as buffer:
-        buffer.write(await image.read())
-    script_path = os.path.join(os.path.dirname(__file__), "encode_image.py")
-    command = [
-        "python", script_path,
-        "saved_models/stegastamp_pretrained",
-        "--image", image.filename,
-        "--save_dir", "out",
-        "--secret", secret
-    ]
-    subprocess.run(command)
 
-    original_filename = os.path.splitext(image.filename)[0]
-    hidden_filename = f"{original_filename}_hidden.png"
+    image_data = await image.read()
+    image_filename = image.filename
 
-    encoded_image_path = os.path.join("out", hidden_filename)
+    try:
+        hidden_image_buffer, residual_image_buffer = encode_image_function(
+            "saved_models/stegastamp_pretrained",
+            image_data,
+            secret
+        )
+    except ValueError as e:
+        return {"error": str(e)}
 
-    return StreamingResponse(open(encoded_image_path, "rb"), media_type="image/png")
+    return StreamingResponse(hidden_image_buffer, media_type="image/png")
 
 #executing script decode_image.py
 #returning decoded code 
